@@ -18,7 +18,7 @@ MMCD = (typeof MMCD != 'undefined') ? MMCD : {
     events_folder : 'MMCD/Events',
     //MODULES
     models : ['BrowserStorage'],
-    managers : ['Utility','Port','State','Tab'],
+    managers : ['Utility','Port','State','Tab', 'String'],
     controllers : [],
     events : ['System.Define'],
     tests : [],  /*model.chrome.Tab,'manager.Html','model.BrowserStorage'*/

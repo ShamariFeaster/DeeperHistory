@@ -19,6 +19,7 @@ var tm = MMCD.getManager('Tab');
 var um = MMCD.getManager('Utility');
 var pm = MMCD.getManager('Port');
 var sm = MMCD.getManager('State');
+var strm = MMCD.getManager('String');
 var highlightLoop = null;
 
 function runtimeOnInstalled(){
@@ -237,67 +238,6 @@ function tabsOnUpdated(tabId, changeInfo, tab){
     um.log('tabsOnUpdated',um.printf('Tab Finished Updating. Tab ID: %s. Tab Title: %s, url: %s',tm.currId(),tm.currTitle(),sm.currPageUrl()),MY_NAME, 2);
   }
 }
-function removeTags(input){
-  var regexTags = /<.*?>/gi;
-  var regexNoscriptTags = /&lt;.*?&gt;/gi;
-  input = input.replace(regexNoscriptTags, ' ').replace(/\s+/g,' ');
-  return input.replace(regexTags, ' ').replace(/\s+/g,' ');
-}
-function removeComments(input){
-  var regex = /<!--.*?-->/gi;
-  return input.replace(regex, ' ').replace(/\s+/g,' ');
-}
-
-function removeScripts(input){
-  return input.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ' ').replace(/\s+/g,' ');
-}
-
-function removeStyles(input){
-  return input.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, ' ').replace(/\s+/g,' ');
-}
-function removeEscapes(input){
-  return input.replace(/&[a-z;]+;/g, ' ').replace(/\s+/g,' ');
-}
-function removeDuplicates(input){
-  var myMap = {},
-      duplicatesStripped = '';
-  var wordArray = input.toLowerCase().split(' ');
-  console.log('Size Coming In: ' + wordArray.length);
-  for(var i in wordArray){
-    myMap[ wordArray[i] ] = wordArray[i];
-  }
-  var mapSize = 0;
-  var type = '';
-  for(var x in myMap){
-    type = typeof myMap[x];
-    if(typeof myMap[x] != 'function'){
-      duplicatesStripped += ' ' + myMap[x];
-      mapSize++; 
-    }
-  }
-  console.log('Size Coming Out: ' + mapSize);
-  return duplicatesStripped;   
-}
-function removeCommons(input){
-  var commonsStripped = '',
-      regex = null,
-      result = null;
-  var wordsToRemove = ['the','be','and','of','a','in','to','have','to','it','I','that','for','you','he','with','on','do','say',
-  'this','they','at','but','we','his','from','that','not','she','or','as','what','go','their','can','who','get','if','would',
-  'her','my','make','about','know','will','as','up','there','so','think','when','which','them','me','people','take','out','into',
-  'just','see','him','your','come','could','than','like','how','then','its','our','these','also','because','her','though','us',
-  'should','as','too','when','something','so','an'];
-  for(var i = 0;i < wordsToRemove.length; i++){
-    regex = new RegExp('\\b' + wordsToRemove[i] + '\\b','gi');
-    commonsStripped = input.replace(regex,' ').replace(/\s+/g,' ');  
-  }
-  return commonsStripped;
-}
-
-function removeWhitespace(input){
-  return input.replace(/\s+/g,' ');
-}
-
 
 function process(queueItem, start){
   if(queueItem == -1 || typeof queueItem == 'undefined')
@@ -327,14 +267,14 @@ function process(queueItem, start){
       commentsStripped = '',
       output = '';
       
-    commentsStripped = removeComments( site[timestamp] );
-    scriptsStripped = removeScripts( commentsStripped );
-    styleStripped = removeStyles( scriptsStripped );
-    tagsStripped = removeTags( styleStripped );
-    duplicatesStripped = removeDuplicates( tagsStripped );
-    commonsStripped = removeCommons( duplicatesStripped );
-    escapesStripped = removeEscapes( commonsStripped );
-    site[timestamp] = removeWhitespace( escapesStripped );
+    commentsStripped = strm.removeComments( site[timestamp] );
+    scriptsStripped = strm.removeScripts( commentsStripped );
+    styleStripped = strm.removeStyles( scriptsStripped );
+    tagsStripped = strm.removeTags( styleStripped );
+    duplicatesStripped = strm.removeDuplicates( tagsStripped );
+    commonsStripped = strm.removeCommons( duplicatesStripped );
+    escapesStripped = strm.removeEscapes( commonsStripped );
+    site[timestamp] = strm.removeWhitespace( escapesStripped );
     
     var size = ((site[timestamp].length * 16) / (8*1024)).toPrecision(3);
     console.log('FINAL OUTPUT: ' + size + ' kB');
