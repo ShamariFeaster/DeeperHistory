@@ -1,0 +1,72 @@
+body{
+  width : 800px;
+}
+
+p{
+  display : block;
+}
+
+#menu{
+ position : fixed;
+ top : 0px;
+ width : 9%;
+ display : block;
+ height : 400px;
+}
+
+#menu a{
+ width: 100%; 
+ display: block;
+ height: 13%;
+ color : black;
+ text-decoration : none;
+ background-color : blue;
+ border : 2px solid black;
+ font-size : 20px;
+ padding : 5px 0px;
+}
+
+#content{
+  width: 80%;
+  margin-left: 20%;
+  display : block;
+}
+.heading{
+  width: 100%;
+  background-color : blue;
+  border : 2px solid black;
+  text-align : center;
+  display : block;
+  margin : 10px 0px;
+}
+
+#important{
+  width: 100%;
+  background-color : yellow;
+  border : 2px solid red;
+  text-align : center;
+}
+.question{
+  font-weight : bold; 
+  text-decoration:underline;
+}
+
+.answer{
+  font-style : italic; 
+}
+
+.pad_text{
+  padding : 2% 2%;
+}
+
+p {
+  font-size : 16px;
+}
+
+ul li{
+  font-style: italic;
+}
+
+h4 {
+  font-size : 13px;
+}

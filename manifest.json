@@ -1,0 +1,37 @@
+{
+  "name": "Deeper History: Your History's Search Engine",
+  "description": "Deeper History searches the contents of pages you've been to and finds 
+                  anything in your history instantaneously",
+  "version": "1.37",
+  "permissions": [
+    "http://deeperhistory.wordpress.com/notify-if-update-available/"
+  ],
+  "omnibox": { "keyword" : "dh" },
+  "icons": {
+    "16": "images/brain-16.png"
+  },
+  "content_security_policy": "script-src 'self' https://deeperhistory.info; object-src 'self'",
+  "permissions": ["tabs"],
+      "background": {
+        "page": "background.html"
+      },
+  "optional_permissions": [ "history", "management" ],
+  "options_page": "options.html",
+  "browser_action": {
+    "default_icon": {                    // optional
+      "19": "images/DH-BA-19px-on.png",           // optional
+      "38": "images/DH-BA-38px-on.png"            // optional
+    },
+    "default_title": "Deeper History Is On. Press To Turn Off.\n\nGo To chrome://extensions And Visit The\nDeeper History Options Page To Learn More\nAbout This Feature"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*","https://*/*"],
+      "js": ["lib/jquery.js","core.js"],
+      "run_at": "document_start",
+      "all_frames": false
+    }
+  ],
+  "manifest_version": 2
+}
+

@@ -1,0 +1,141 @@
+<head>
+<script src="lib/jquery.js"></script>
+<script src="lib/MMCD_USAGE.js"></script>
+<script src="help.js" type="text/javascript"></script>
+</head>
+<link  rel="stylesheet" href="help.css" type="text/css"></link>
+<body>
+
+<div id="menu">
+<a href="#top">Top</a>
+<a href="#instructions">Instructions</a>
+<a class="report_bug" href="" target="_blank">Report A Bug</a>
+<a id="dev_twitter" href="" target="_blank">Talk To The Developer</a>
+<a href="#privacy">Privacy</a>
+<a href="#performance">Technical Stuff</a>
+<a href="#state">State Of The Software</a>
+<a id="version_notes" href="">Version Notes</a>
+</div>
+
+
+<div id="content">
+<div id="important">
+<a id="top"><h4>READ ME FIRST!!</h4></a>
+
+<p class="pad_text">Deep History <b>DOES NOT</b> search your preexisting history so when 
+you first install it so initially Deeper History searches will not return result. You <b>CAN</b> 
+have it perform a scan of your history by going to the <a href="options.html" target="_blank">OPTIONS PAGE</a>.</p>
+</div>
+<a class="heading" ><h3>http://deeperhistory.wordpress.com/</h3></a>
+<a class="heading" id="intro" ><h3>INTRODUCTION</h3></a>
+
+<p>Have you ever wanted to search for things in your history but couldn't find it? If the words you're looking for 
+part of the page title or url, you're out of luck because that's all the conventional history saves. </p>
+
+<p>Things like comments, quotes, names, email addresses, links and other page contents are lost in your browser history. 
+Deeper History allows you to search for and recall the text of any page you've visited.</p>
+
+<p>Search from your browser bar. Results are returned instantly. Pick a result and Deeper History takes you to that 
+page, scrolls to what you searched for and highlights it.</p>
+
+<a class="heading" id="privacy"><h3>PRIVACY</h3></a>
+<p>Let's talk about what this app DOES NOT do:</p>
+<ul>
+<li>1. Send your history anywhere</li>
+<li>2. Analyze your history</li>
+<li>3. Analyze your browsing behavior or habits</li>
+<li>4. Keep any meta-data about you</li>
+</ul>
+
+<p>You will notice this app doesn't ask you for permission to use your history. Deeper History doesn't
+keep track of clicks, how long you stay on a page, or ANYTHING about your browsing habits. </p>
+
+<p>Deeper History keeps it's own database. Only the url, the date/time you visited it, and compressed 
+contents of pages you go to are stored ON YOUR MACHINE. Not even other apps running on your browser 
+are able to see this stored data.</p>
+
+<a class="heading" id="performance"><h3>TECHNICAL STUFF</h3></a>
+
+<p>Deeper History makes use of the time your browser is dormant to compress and store the webpages you've 
+been to. I haven't recorded increased page loading latency but please let me know if you are and the 
+issue will be fixed in future updates.</p>
+
+<h4>PERMISSIONS </h4>
+
+<p>Deeper History ask you to "Access data on all you websites." In order to allow you to search through 
+your visited pages, it needs this permission to get the contents of the visited page for storage in your 
+database. The highlight function also depends on this permission.</p>
+
+<p>Deeper History asks you to "Access your tabs and browsing activity." Deeper History would not be able 
+to open tabs for things like the result overflow page, help page or selected results without this permission. 
+</p>
+
+<a class="heading" id="state"><h3>STATE OF THE SOFTWARE</h3></a>
+
+<p>This is a BETA release. There is currently only one person working on this software so there may be
+bugs. Please report bugs by going 
+<a class="report_bug" href="" target="_blank">here.</a> </p>
+
+<a class="heading" id="instructions"><h3>Instructions</h3></a>
+
+<h4> ACTIVATING THE EXTENSION </h4>
+<p>Type "dh" and hit the "tab" key in the browser bar to enter Deeper History search mode. Then type 
+in search terms and Deeper History will search pages you have visited for those terms and return 
+matching pages right there in your browser bar, just like google search.</p>
+
+<h4> MULTI-TERM SEARCHING </h4>
+<p>You can search for multiple terms at once by using a comma-separated list. For example, if you 
+wanted to find pages in your history that had the words "json" and "phonegap API" you would activate 
+the extension then type in "json, phonegap API"</p>
+
+<h4> AUTO-COMPLETE </h4>
+<p>There is also rudimentary auto-complete. Start typing a search term and all words in your database 
+that begin with those letters will be returned. For example, if you activate the extension and type 
+in "pho", anything in your databasas starting with "pho" (phone, phonegap, photon, etc.) would be 
+returned. </p>
+
+<p>This feature also works with a multi-term search. Using the above multi-term search example, you 
+could type in "js,phon" and you would get back all pages that had the words "json, phonegap" as well 
+as any other words starting those letters.  </p>
+
+<h4> SELECTING A SEARCH RESULT </h4>
+<p>Select one of those matches using your mouse or the up/down arrow keys then enter. On selection, 
+Deeper History will take you to that page and highlight and scroll to the term you searched for.</p>
+
+<h4> SEARCH TIME FRAME </h4>
+<p>Currently, only the last 3 days of your history are searchable. Future releases will allow you to 
+specify any search time frame. All of your history data is still stored. So you will be able to make 
+use of all the history you have accumulated when those features are added. I'm the only person working 
+on this so it takes time to get some of the more advanced features built, tested, and released. </p>
+
+<h4> DELETE THE DATABASE </h4>
+
+<p>Just remove the app from Chrome and all the site data you have accumulated will be removed 
+permanently. Feature to let you do this while app is running is in the works.</p>
+
+<h4> VIEWING THE  DATABASE </h4>
+
+<p>Type "dh" and hit the "tab" key in the browser bar to activate the search functionality. Then 
+type in ".db" and press "enter" and you will be taken to a page that displays data about what's 
+stored in your Deeper History database.</p>
+
+<h4>SCANNING YOUR PRE-EXISTING HISTORY </h4>
+
+<p>Go to the <a href="options.html" target="_blank">OPTIONS PAGE</a> select how much of your browsing
+history you want to scan and then press the "Scan" button. <br><br><b>IMPORTANT!!</b> Deeper History has to 
+re-open the pages in your history to index the page contents. It will open a single tab and open a 
+page from your history every 2 seconds. <b>We recommend performing the scan when you are away from the 
+computer.</b> </p>
+
+<a class="heading" id="faq"><h3>FAQ</h3></a>
+<span class="question">I Just Installed This. Why Didn't I Get Any Results?</span>
+<p class="answer">Deep History uses it's own history database so when it's first installed it hasn't
+built any history to search yet. As you surf, pages will get added to the database and you will
+start seeing results</p>
+
+<p class="answer">You can have it perform a scan of your history by going to the <a href="options.html" target="_blank">OPTIONS PAGE</a></p>
+
+
+</div><!-- content-->
+
+</body>
