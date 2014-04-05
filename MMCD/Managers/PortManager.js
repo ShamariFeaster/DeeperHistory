@@ -65,6 +65,19 @@ MMCD.managers.Port = (function(){
         //throw invalid port error
         return false;
       }
+    },
+    postMessageToPort : function(currTabId, msg){ 
+      if(this.hasPorts(currTabId)){
+        var portArray = this.getTabPorts(currTabId);
+        var port = null;
+        if(typeof portArray != 'undefined'){
+          for(index in portArray){
+            port = portArray[index];
+            port.postMessage(msg);
+
+          }
+        }
+      }
     }
     
   }

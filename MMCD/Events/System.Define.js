@@ -20,19 +20,6 @@ var um = MMCD.getManager('Utility');
 var pm = MMCD.getManager('Port');
 var sm = MMCD.getManager('State');
 var highlightLoop = null;
-function postMessageToPort(currTabId, msg){ //MOVE TO PortManager
-  if(pm.hasPorts(currTabId)){
-    var portArray = pm.getTabPorts(currTabId);
-    var port = null;
-    if(typeof portArray != 'undefined'){
-      for(index in portArray){
-        port = portArray[index];
-        port.postMessage(msg);
-
-      }
-    }
-  }
-}
 
 function runtimeOnInstalled(){
 
@@ -49,7 +36,7 @@ function runtimeOnConnect(port) {
   }else{
     um.debug(1,MY_NAME,'runtimeOnConnect','ERROR: Problem adding port to map');
   }
-  postMessageToPort(tm.currId(),{changeHighlightColor : localStorage['highlightColor']});
+  pm.postMessageToPort(tm.currId(),{changeHighlightColor : localStorage['highlightColor']});
     port.onMessage.addListener(function(msg) {
       for(var i in msg){var msgType = i};//get message
         switch(msgType) {
@@ -133,7 +120,7 @@ function runtimeOnConnect(port) {
             clearInterval(sm.highlightLoop());
             sm.highlightLoop( setInterval(function(){
                             console.log('Trying To Post: ' + msg);
-                            postMessageToPort(tm.currId(), { highlight: { word : msg } } );
+                            pm.postMessageToPort(tm.currId(), { highlight: { word : msg } } );
                           },1500));
             break;
         }
@@ -190,8 +177,9 @@ function tabsOnActivated(tab) {
   if(typeof tab != 'undefined'){
     chrome.tabs.get(tab.tabId, function(tab){
       var sm = MMCD.getManager('State');
+      var pm = MMCD.getManager('Port');
       var oldId = tm.currId();
-      postMessageToPort(oldId, {turnOffShift : true});
+      pm.postMessageToPort(oldId, {turnOffShift : true});
       tm.currId(tab.id);
       tm.lastId(tm.currId());
       tm.currTitle(tab.title);
@@ -205,7 +193,7 @@ function tabsOnActivated(tab) {
           chrome.tabs.executeScript(tab.id, {file: 'core.js'},
           function(){
             um.log('tabsOnActivated','Tab Activated and script run.',MY_NAME,1);
-            postMessageToPort(tab.id,{changeHighlightColor : localStorage['highlightColor']});
+            pm.postMessageToPort(tab.id,{changeHighlightColor : localStorage['highlightColor']});
             });
           });
       }catch(e){
@@ -245,7 +233,7 @@ function tabsOnUpdated(tabId, changeInfo, tab){
     tm.currTitle(tab.title);
     sm.currPageUrl(tab.url);
     var timestamp = addSite(tab.url);
-    postMessageToPort(tm.currId(), {getRawPage : {timestamp : timestamp, url : tab.url, title : tab.title } });
+    pm.postMessageToPort(tm.currId(), {getRawPage : {timestamp : timestamp, url : tab.url, title : tab.title } });
     um.log('tabsOnUpdated',um.printf('Tab Finished Updating. Tab ID: %s. Tab Title: %s, url: %s',tm.currId(),tm.currTitle(),sm.currPageUrl()),MY_NAME, 2);
   }
 }
@@ -602,19 +590,19 @@ function onInputEntered(text) {
       break;
     case '.hl-default':
       localStorage['highlightColor'] = 'default';
-      postMessageToPort(tm.currId(),{changeHighlightColor : 'default'});
+      pm.postMessageToPort(tm.currId(),{changeHighlightColor : 'default'});
       break;
     case '.hl-yellow':
       localStorage['highlightColor'] = 'yellow';
-      postMessageToPort(tm.currId(),{changeHighlightColor : 'yellow'});
+      pm.postMessageToPort(tm.currId(),{changeHighlightColor : 'yellow'});
       break;
     case '.hl-blue':
       localStorage['highlightColor'] = 'blue';
-      postMessageToPort(tm.currId(),{changeHighlightColor : 'blue'});
+      pm.postMessageToPort(tm.currId(),{changeHighlightColor : 'blue'});
       break;
     case '.hl-green':
       localStorage['highlightColor'] = 'green';
-      postMessageToPort(tm.currId(),{changeHighlightColor : 'green'});
+      pm.postMessageToPort(tm.currId(),{changeHighlightColor : 'green'});
       break;
     default:
       if(!sm.matchFound()){
@@ -627,7 +615,7 @@ function onInputEntered(text) {
       chrome.tabs.update(tm.currId(), {url : url}, function(tab){
         clearInterval(sm.highlightLoop());
         sm.highlightLoop( setInterval(function(){
-                            postMessageToPort(tab.id, { highlight: { word : matchedWord } } );
+                            pm.postMessageToPort(tab.id, { highlight: { word : matchedWord } } );
                           },1500));
       });
       break;
