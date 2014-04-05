@@ -70,8 +70,15 @@ function runtimeOnConnect(port) {
                 sm.persist('processQueue').push(queueItem);
             //there is pre-existing html, do a diff
             }else{
-              diffResults = dmp.diff_main(site['init']['html'], site['buffer']);
-              dmp.diff_cleanupSemantic(diffResults);
+              try{
+                diffResults = dmp.diff_main(site['init']['html'], site['buffer']);
+                dmp.diff_cleanupSemantic(diffResults);
+              }catch(e){
+                console.log('Error diffing. Returning empty array as Diff result');
+                console.log(e);
+                diffResults = [];
+              }
+              
               //if there is new html, add diffObj to site obj
               for(var i in diffResults){
                 if( diffResults[i][0] == 1 ){
@@ -284,11 +291,18 @@ function process(queueItem, start){
       var transaction = bsmdl.db.transaction(["DeepHistoryIndex"], "readwrite");
       var deepHistoryIndex = transaction.objectStore("DeepHistoryIndex");
       var size = ((site[timestamp].length * 16) / (8*1024)).toPrecision(3);
+      if(sm.lastKeyAdded() == timestamp){
+          console.log('timestamp is same as last. was ' + timestamp + ' now it is ' + (timestamp + 1));
+          timestamp++;
+          
+        }
       var storeObj = {timestamp : timestamp, url : url, terms : site[timestamp], title : site['title'], size : size  };
+      sm.lastKeyAdded( storeObj.timestamp );
       var request = deepHistoryIndex.add( storeObj );
       
       request.onsuccess = function(event) {
-        console.log('Object Stored & Added To Cache');
+        console.log('Object Stored & Added To Cache with timestamp = ');
+        console.log(event);
         var searchCache = sm.persist('searchCache');
         sm.dbSize( sm.dbSize() + parseFloat(size) );
         sm.cacheSize( sm.cacheSize() + parseFloat(size) );
@@ -307,7 +321,11 @@ function process(queueItem, start){
       if(site[timestamp] != ''){
         var transaction = bsmdl.db.transaction(["DeepHistoryIndex"], "readwrite");
         var deepHistoryIndex = transaction.objectStore("DeepHistoryIndex");
+        
+        
+        
         var storeObj = {timestamp : timestamp, url : url, terms : site[timestamp], title : site['title'], size : size };
+        
         var request = deepHistoryIndex.add( storeObj );
         request.onsuccess = function(event) {
           console.log('Object Stored & Added To Cache');
@@ -394,11 +412,7 @@ function onInputChanged(text, suggest) {
     return;
   }
   chrome.omnibox.setDefaultSuggestion({description : '<dim>Searching Your History For "<match>' + text + '"</match></dim>' });
-  var wordsToRemove = ['the','be','and','of','a','in','to','have','to','it','I','that','for','you','he','with','on','do','say',
-    'this','they','at','but','we','his','from','that','not','she','or','as','what','go','their','can','who','get','if','would',
-    'her','my','make','about','know','will','as','up','there','so','think','when','which','them','me','people','take','out','into',
-    'just','see','him','your','come','could','than','like','how','then','its','our','these','also','because','her','though','us',
-    'should','as','too','when','something','so','an'];
+  var wordsToRemove = strm.wordsToRemove;
   for(var i in wordsToRemove){
     text = text.replace(new RegExp('\\b' + wordsToRemove[i] + '\\b','gi'),' ');
   }

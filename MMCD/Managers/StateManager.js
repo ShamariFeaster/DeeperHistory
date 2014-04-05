@@ -14,7 +14,8 @@ MMCD.managers.State = (function(){
     UPDATE_URL,
     PROCESS_DELAY_TIME,
     isExtenstionEnabled,
-    isUpdateAvailable;
+    isUpdateAvailable,
+    lastKeyAdded;
   
   (initManager = function(){
     _this.currPageUrl = '';
@@ -32,6 +33,7 @@ MMCD.managers.State = (function(){
     _this.cacheSize = 0.0;
     _this.isExtenstionEnabled = true;
     _this.isUpdateAvailable = false;
+    _this.lastKeyAdded = 0;
     searchOptions = {
       keys: ['terms'],
       id: 'url'
@@ -51,6 +53,7 @@ MMCD.managers.State = (function(){
     searchOptions : searchOptions,
     highlightLoop : MMCD.getSet(_this.highlightLoop),
     matchFound : MMCD.getSet(_this.matchFound),
+    lastKeyAdded : MMCD.getSet(_this.lastKeyAdded),
     DAY : DAY,
     HOUR : HOUR,
     MAX_AGE : MAX_AGE,
