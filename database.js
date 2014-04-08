@@ -8,6 +8,7 @@ $(function(){
   MMCD_USAGE.processOccuranceByUser(MMCD_USAGE.EVENTS.db_page_opened);
 });
 
+var db = null;
 jQuery.globalEval = function(){};
 var openDbRequest = indexedDB.open("DeepHistory", localStorage['DeepHistoryVersion']);
 
@@ -19,18 +20,20 @@ openDbRequest.onsuccess = function(event) {
   jQuery("#list4").jqGrid({
       datatype: "local",
       height: 800,
-        colNames:['Time', 'Age', 'Title', 'Size (kB)', 'URL', 'Terms'],
+        colNames:['Id','Time', 'Age', 'Title', 'Size (kB)', 'URL', 'Terms'],
         colModel:[
+          {name:'timestamp',index:'timestamp', width:90},
           {name:'prettytime',index:'prettytime', width:100, sorttype:"int"},
           {name:'age',index:'age', width:70},
           {name:'title',index:'title', width:200},
           {name:'size',index:'size', width:30, sorttype:"float"},
           {name:'url',index:'url', width:150},
-          {name:'terms',index:'terms', width:900},
+          {name:'terms',index:'terms', width:900}
+          
           
         ]
     });
-  var db = event.target.result;
+  db = event.target.result;
   console.log(db);
   var transaction = db.transaction(["DeepHistoryIndex"], "readwrite");
 
@@ -92,9 +95,46 @@ openDbRequest.onsuccess = function(event) {
       $('#cache_size').text( $('#cache_size').text() + totalCacheSize + 'kb' );
       $('#max_age').text( $('#max_age').text() + max_days + ' DAYS, ' + max_hours + ' HOURS' );
     }
-    
-    
-    
-
   };
+  function getTransaction(indexName){
+    var transaction = db.transaction(["DeepHistoryIndex"], "readwrite");
+    return transaction.objectStore("DeepHistoryIndex");
+  }
+  
+  $('#save').click(function(e){
+    var timestamp = parseFloat($('#id').val());
+    if(timestamp){
+
+      var request = getTransaction("DeepHistoryIndex").get(timestamp);
+      request.onsuccess = function(e){
+        request.result.terms = $('#terms').val();
+        getTransaction("DeepHistoryIndex").put(request.result).onsuccess = function(){
+          console.log('Success updating: ' + timestamp);
+          location.reload();
+        }
+      };
+      
+      request.onerror = function(e){
+        console.log('Error updating: ' + timestamp);
+      };
+    }
+  });
+  
+  $('#remove').click(function(e){
+  console.log('dd');
+    var timestamp = parseFloat($('#id').val());
+    if(timestamp){
+
+      var request = getTransaction("DeepHistoryIndex").delete(timestamp);
+      request.onsuccess = function(e){
+        console.log('Success deleting: ' + timestamp);
+        console.log(e);
+      };
+      
+      request.onerror = function(e){
+        console.log('Error deleting: ' + timestamp);
+      };
+    }
+  });
+  
 };

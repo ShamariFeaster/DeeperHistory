@@ -455,7 +455,7 @@ function onInputChanged(text, suggest) {
   var overflowItem = {};
   var titleMap = {};
   for(var i in searchCache){
-    terms = searchCache[i].terms.toLowerCase();
+    terms = searchCache[i].terms;
     if(text.length > 1 && ( regexResults = regexText.exec( searchCache[i].terms ) ) != null){
       matchedWord = regexResults[0].toLowerCase().trim();//no dups due to case
       matchedResults[matchedWord] = matchedWord; //Use map to remove duplicates
@@ -725,6 +725,7 @@ MMCD.hook.onStart = function(){
         */
       }
       sm.persist('searchCache', searchCache);
+    
     };
 
   };
