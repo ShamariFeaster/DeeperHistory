@@ -9,8 +9,12 @@ $(function(){
 });
 
 var db = null;
+var exportJson = [];
+var importedDb = '';
 jQuery.globalEval = function(){};
 var openDbRequest = indexedDB.open("DeepHistory", localStorage['DeepHistoryVersion']);
+var reader = new FileReader();
+
 
 openDbRequest.onerror = function(event) {
   console.log('IndexedDb: error  fired');
@@ -62,7 +66,7 @@ openDbRequest.onsuccess = function(event) {
     var age = '';
     if(cursor) {
       record = cursor.value;
-      
+      exportJson.push(record);
       d = new Date(record.timestamp);
       month = d.getMonth() + 1;
       
@@ -121,7 +125,6 @@ openDbRequest.onsuccess = function(event) {
   });
   
   $('#remove').click(function(e){
-  console.log('dd');
     var timestamp = parseFloat($('#id').val());
     if(timestamp){
 
@@ -137,4 +140,38 @@ openDbRequest.onsuccess = function(event) {
     }
   });
   
+  $('#clear').click(function(e){
+      var request = getTransaction("DeepHistoryIndex").clear();
+      request.onsuccess = function(e){
+        console.log('Success deleting Store');
+        console.log(e);
+        location.reload();
+      };
+      
+      request.onerror = function(e){
+        console.log('Error deleting Store');
+      };
+    
+  });
+  
+  $('#export').click(function(e){
+    location.href = "data:application/octet-stream," + encodeURIComponent(JSON.stringify(exportJson));
+
+  });
+  
+  $("#import").change(function() {
+      reader.readAsText($(this).prop("files")[0]);
+  });
+    
+  reader.onload = function(e) {
+    var importedDb = JSON.parse(reader.result);
+    var record = null;
+    var successCallback = function(e){
+      console.log(e.target);
+    }
+    for(var i in importedDb){
+      record = importedDb[i];
+      getTransaction("DeepHistoryIndex").add(record).onsuccess = successCallback;
+    }
+  }  
 };

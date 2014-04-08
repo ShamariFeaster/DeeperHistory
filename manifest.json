@@ -2,7 +2,7 @@
   "name": "Deeper History: Your History's Search Engine",
   "description": "Deeper History searches the contents of pages you've been to and finds 
                   anything in your history instantaneously",
-  "version": "1.37",
+  "version": "1.38",
   "permissions": [
     "http://deeperhistory.wordpress.com/notify-if-update-available/"
   ],
