@@ -166,12 +166,17 @@ openDbRequest.onsuccess = function(event) {
   reader.onload = function(e) {
     var importedDb = JSON.parse(reader.result);
     var record = null;
+    console.log(importedDb);
     var successCallback = function(e){
       console.log(e.target);
     }
+    
     for(var i in importedDb){
       record = importedDb[i];
+      //console.log(record);
       getTransaction("DeepHistoryIndex").add(record).onsuccess = successCallback;
     }
+    
+    
   }  
 };

@@ -61,6 +61,38 @@ return {
   },
   removeWhitespace : function(input){
     return input.replace(/\s+/g,' ');
+  },
+  sanitize : function(input){
+    var output = '';
+    output = this.removeComments( input );
+    output = this.removeScripts( output );
+    output = this.removeStyles( output );
+    output = this.removeTags( output );
+    output = this.removeDuplicates( output );
+    output = this.removeCommons( output );
+    output = this.removeEscapes( output );
+    return this.removeWhitespace( output );
+  },
+  getHostName : function(input){
+    var hostName = 'unknown';
+    var hostRegex = new RegExp('http(s)*:\/\/([^\/]*)+\.([^\/]*)+(\/)*(.*)*','i');
+    var result = hostRegex.exec(input);
+
+    if(result != null)
+      hostName = result[2];
+    return hostName;
+  },
+  escapeRegex : function(input){
+    return input.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, "\\$1");
+  },
+  removeDecoration : function(input, decoration){
+    var split = decoration.split(' ');
+
+    for(var i in split){
+      //console.log(this.escapeRegex(split[i]));
+      input = input.replace(new RegExp('\\b'+this.escapeRegex(split[i])+'\\b','i'),' ');
+    }
+    return this.removeWhitespace(input);
   }
 
 };

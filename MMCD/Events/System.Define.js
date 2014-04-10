@@ -26,6 +26,39 @@ function runtimeOnInstalled(){
 
 }
 
+function getDecoration(host, site, siteUrl, dmp){
+  var diffResults = null;
+  var thisDecoration = '';
+  var lastDecoration = '';
+  for(var url in host){
+    console.log('Diffing: ' + url + ' to ' + siteUrl);
+    if(url != 'decoration' && url != siteUrl){
+      try{
+        diffResults = dmp.diff_main(host[url]['buffer'], site['buffer']);
+        dmp.diff_cleanupSemantic(diffResults);
+        //console.log(diffResults);
+       
+        for(var i in diffResults){
+          if( diffResults[i][0] == 0 ){
+            thisDecoration += diffResults[i][1];
+          }
+        }
+      console.log('Host decoration: ' + thisDecoration);
+      if(thisDecoration.length > lastDecoration.length){
+        lastDecoration = thisDecoration;
+        console.log('New Host decoration: ' + lastDecoration);
+      }
+      thisDecoration = '';
+      }catch(e){
+        console.log('Error diffing. Returning empty array as Diff result');
+        console.log(e);
+         host['decoration'] = '';
+      }
+    }
+  }
+  host['decoration'] = lastDecoration;
+}
+
 function runtimeOnConnect(port) {
 
   var tabId = tm.currId();
@@ -45,21 +78,41 @@ function runtimeOnConnect(port) {
           case 'setRawPage':
             msg = msg['setRawPage'];
             var dmp = new diff_match_patch();
-            var timestamp, diffId, diffResults, url, html, site, title,
-                insertionFound = false, queueItem = {}, diffFound = false;
+            var timestamp, diffId, diffResults, url, html, site, title, host, siteUrl,
+                insertionFound = false, queueItem = {}, diffFound = false, hostName = '';
             
+            hostName = strm.getHostName(msg.url);
             timestamp = diffId = msg.timestamp;
-            url = msg.url;
-            site = sm.persist('cache')['sites'][url]; //indexed on href
-            site['buffer'] = msg.html;
-            //html = msg.html.replace(/(\r\n|\n|\r)/gm,'');//remove new lines
-            //html = msg.html.replace(/\s+/g,' ');//remove multiple whitespace
+            url = siteUrl = msg.url;
             
+            host = sm.persist('cache')['sites'][hostName]; //indexed on href
+            site = host[url];
+            site['buffer'] = strm.sanitize( msg.html );
+           
             title = msg.title;
             
             //is this the first time?
             if( site['init']['html'] == '' ){
               console.log('STORING INIT HTML');
+              
+              var contentLength = site['buffer'].length;
+              if(typeof host['decoration'] == 'undefined'){
+                getDecoration(host, site, siteUrl, dmp);
+              }else if(host['decoration'].length < ((parseFloat(contentLength) * 0.50))){//targeting 15% reduction in length
+                console.log('INSUFFICIENT COMPRESSION: ' + (host['decoration'].length / contentLength));
+                getDecoration(host, site, siteUrl, dmp);//if not meeting reduction, we try again
+              }
+              if(typeof host['decoration'] != 'undefined')
+                console.log(host['decoration'].length + ' ' + ((parseFloat(contentLength) * 0.50)));
+                
+              console.log('BEFORE DR: ' + ((site['buffer'].length * 16) / (8*1024)).toPrecision(3) + 'kB');
+              if(typeof host['decoration'] != 'undefined')
+                site['buffer'] = strm.removeDecoration(site['buffer'], host['decoration']);
+              console.log('AFTER DR: ' + ((site['buffer'].length * 16) / (8*1024)).toPrecision(3) + 'kB');
+              console.log('FINAL COMPRESSION: ' + (host['decoration'].length / contentLength));
+              //getDecoration(host, site, siteUrl, dmp);
+       
+              
               site['init']['html'] = site['buffer'];
               site['init']['timestamp'] = timestamp;
               site[timestamp] = site['buffer'];
@@ -68,8 +121,13 @@ function runtimeOnConnect(port) {
               queueItem['timestamp'] = timestamp;
               if(sm.isExtenstionEnabled() == true)
                 sm.persist('processQueue').push(queueItem);
+              
             //there is pre-existing html, do a diff
             }else{
+              console.log('BEFORE DR: ' + ((site['buffer'].length * 16) / (8*1024)).toPrecision(3) + 'kB');
+              if(typeof host['decoration'] != 'undefined')
+                site['buffer'] = strm.removeDecoration(site['buffer'], host['decoration']);
+              console.log('AFTER DR: ' + ((site['buffer'].length * 16) / (8*1024)).toPrecision(3) + 'kB'); 
               try{
                 diffResults = dmp.diff_main(site['init']['html'], site['buffer']);
                 dmp.diff_cleanupSemantic(diffResults);
@@ -78,18 +136,21 @@ function runtimeOnConnect(port) {
                 console.log(e);
                 diffResults = [];
               }
-              
+              console.log(dmp.DIFF_EQUAL);
               //if there is new html, add diffObj to site obj
               for(var i in diffResults){
                 if( diffResults[i][0] == 1 ){
                   console.log('***DIFF INSERTION Found****: ' + diffResults[i][1]);
                   site[timestamp] = diffResults[i][1];//add diff record to site
+   
                   queueItem['url'] = url;
                   queueItem['timestamp'] = timestamp;
                   diffFound = true;
                   insertionFound = true;
                 }else if( diffResults[i][0] == -1 ){
                   diffFound = true;
+                }else if( diffResults[i][0] == 0 ){
+
                 }
               }
               if(diffFound){//could be deletion or insertion
@@ -106,10 +167,13 @@ function runtimeOnConnect(port) {
               }else{
                 console.log('No Insertion Found. No Queue Actions');
               }
+              
+              
                 
             }
+
             console.log('PROCESS QUEUE');
-            console.log( sm.persist('processQueue') );
+            //console.log( sm.persist('processQueue') );
             break;
           //**********************END DIFF QUEUEING**********************************
           case 'mouseMoveDetected':
@@ -222,12 +286,14 @@ function tabOnRemoved(tabId, info) {
 function tabsOnUpdated(tabId, changeInfo, tab){
   
   function addSite(url){
-    var sites = sm.persist('cache').sites;
+    if(typeof sm.persist('cache')['sites'][strm.getHostName(url)] == 'undefined')
+      sm.persist('cache')['sites'][strm.getHostName(url)] = {};
+    var host = sm.persist('cache')['sites'][strm.getHostName(url)];
     var timestamp = (new Date()).getTime();
     var initObj = {html : '', timestamp : timestamp}; //make class
     var siteObj = { init : initObj,  buffer : ''}; // make class
-    if(typeof sites[url] == 'undefined'){
-      sites[url] = siteObj;
+    if(typeof host[url] == 'undefined'){
+      host[url] = siteObj;
     }
     return timestamp;
   }
@@ -255,14 +321,14 @@ function process(queueItem, start){
   
   url = queueItem['url'];
   timestamp = queueItem['timestamp'];
-  site = sm.persist('cache')['sites'][url];
+  site = sm.persist('cache')['sites'][strm.getHostName(url)][url];
   if(typeof site != 'undefined'){
     if( sm.secDiff(start) > 1 ){
         processQueue.splice(0,1,queueItem);
         console.log('Could not removing articles in alloted time. Placing back on queue. Returning');
         process(-1);
       }
-  
+    /*
     var tagsStripped = '',
       whitespaceStripped = '', 
       scriptsStripped = '', 
@@ -286,7 +352,7 @@ function process(queueItem, start){
     var size = ((site[timestamp].length * 16) / (8*1024)).toPrecision(3);
     console.log('FINAL OUTPUT: ' + size + ' kB');
     console.log('Time Elapsed After Compression: ' +  sm.secDiff(start) );
-
+    */
     if( processQueue.length > 0 ){
       var transaction = bsmdl.db.transaction(["DeepHistoryIndex"], "readwrite");
       var deepHistoryIndex = transaction.objectStore("DeepHistoryIndex");
@@ -357,6 +423,7 @@ function processNextItem(){
 }
 
 function processLoop(){
+  console.log('tick');
   var timeSinceMouseMove = sm.currentTime() - sm.lastMouseMove();
   var processQueue = sm.persist('processQueue');
   if( timeSinceMouseMove  >= sm.PROCESS_DELAY_TIME && processQueue.length > 0 && sm.isExtenstionEnabled() == true){
@@ -663,6 +730,10 @@ MMCD.hook.onStart = function(){
   localStorage['DeepHistoryVersion'] = 11;
   localStorage['highlightColor'] = 'default';
   var request = indexedDB.open("DeepHistory", localStorage['DeepHistoryVersion']);
+  
+  request.onupgradeneeded = function(e){
+    console.log('upgrade needed');
+  };
   request.onerror = function(event) {
     console.log('IndexedDb: error  fired');
   };
