@@ -306,8 +306,14 @@ function tabsOnUpdated(tabId, changeInfo, tab){
     tm.currId(tab.id);
     tm.currTitle(tab.title);
     sm.currPageUrl(tab.url);
-    var timestamp = addSite(tab.url);
-    pm.postMessageToPort(tm.currId(), {getRawPage : {timestamp : timestamp, url : tab.url, title : tab.title } });
+    var hostName = strm.getHostName(tab.url);
+    /*Blocking 'google.com because this is of little recall value and it takes up a lot of space in the 
+    db*/
+    if(hostName != 'www.google.com'){
+      var timestamp = addSite(tab.url);
+      pm.postMessageToPort(tm.currId(), {getRawPage : {timestamp : timestamp, url : tab.url, title : tab.title } });
+    }
+    
     um.log('tabsOnUpdated',um.printf('Tab Finished Updating. Tab ID: %s. Tab Title: %s, url: %s',tm.currId(),tm.currTitle(),sm.currPageUrl()),MY_NAME, 2);
   }
 }
