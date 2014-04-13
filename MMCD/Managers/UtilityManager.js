@@ -81,6 +81,55 @@ MMCD.managers.Utility = (function(){
     else
       return returnVal;
   }
+
+    /*note this will fail if it is passed a variable that
+    has never been declared in the calling scope. This fails at 
+    the calling scope and never reaches here. Hence this will only work for
+    properties of objects and parameters (which are properties of function objects)*/
+    function isDef(obj){
+      return (typeof obj != 'undefined');
+    }
+
+    function isSet(obj){
+      return (this.isDef(obj) && obj !== null);
+    }
+    
+    /*Checks if obj is defined then if it's a function. Used
+    for safely calling callbacks*/
+    function isFunc(obj, throwError){
+      //console.log('throwError: ' + throwError);
+      var te = ( this.isDef(throwError) && throwError.constructor == Boolean ) ? throwError : false;
+      //console.log(te);
+      if( te && !(obj && {}.toString.call(obj) == '[object Function]') )
+        throw 'Not A Function';
+      return ( this.isDef(obj) && {}.toString.call(obj) == '[object Function]');
+      
+    }
+
+    /*Checks param defined if so it returns it, if not returns null, or can throw
+    error if desired*/
+    function initParam(param, isReq){
+      var throwError = ( this.isDef(isReq) && isReq.constructor == Boolean ) ? isReq : false;
+      var value = null;
+      if( this.isDef(param) )
+        value = param;
+      else if(throwError){
+        throw 'Required Parameter Missing';
+      }
+      return value;  
+      
+    }
+    
+    /*Tests for callability and if passes, calls it and returns results*/
+    function executeCallback(callback, throwError){
+      if( this.isFunc(callback, throwError) ){
+        return callback();
+      }else{
+        return null;
+      }
+    }
+  
+  
   
   return {
     objToString : inspectObj,
@@ -91,7 +140,12 @@ MMCD.managers.Utility = (function(){
     objectLength : objectlength,
     debug : debug,
     log : log,
-    printf : printf
+    printf : printf,
+    isDef : isDef,
+    isSet : isSet,
+    isFunc : isFunc,
+    initParam : initParam,
+    executeCallback : executeCallback
   }
 })();
 

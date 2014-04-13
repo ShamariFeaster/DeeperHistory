@@ -17,7 +17,7 @@ MMCD = (typeof MMCD != 'undefined') ? MMCD : {
     test_folder : 'MMCD/Tests',
     events_folder : 'MMCD/Events',
     //MODULES
-    models : ['BrowserStorage'],
+    models : ['BrowserStorage', 'IdbClient'],
     managers : ['Utility','Port','State','Tab', 'String'],
     controllers : [],
     events : ['System.Define'],

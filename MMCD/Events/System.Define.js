@@ -14,6 +14,8 @@ var MY_NAME = 'System.Define';
 var emptyFunction = function(){};
 //Models
 var bsmdl = MMCD.getModel('BrowserStorage');
+var IdbClient = MMCD.classes.IdbClient;
+
 //Managers
 var tm = MMCD.getManager('Tab');
 var um = MMCD.getManager('Utility');
@@ -726,102 +728,66 @@ chrome.omnibox.setDefaultSuggestion({description : '<dim>Type ".help" For Instru
 
 
 MMCD.hook.onStart = function(){
-  MMCD_USAGE.printTableNames(true);
-  chrome.permissions.remove({permissions : ['history']}, function(granted){
-    if(granted == true){
-      console.log('History permission is removed');
-    }
-  });
+  //MMCD_USAGE.printTableNames(true);
   setInterval(processLoop, 1000);
+  
   localStorage['DeepHistoryVersion'] = 11;
   localStorage['highlightColor'] = 'default';
-  var request = indexedDB.open("DeepHistory", localStorage['DeepHistoryVersion']);
   
-  request.onupgradeneeded = function(e){
-    console.log('upgrade needed');
-  };
-  request.onerror = function(event) {
-    console.log('IndexedDb: error  fired');
-  };
-  request.onsuccess = function(event) {
-    console.log('IndexedDb: onsuccess  fired');
-    bsmdl.db = event.target.result;
-    
-    var transaction = bsmdl.db.transaction(["DeepHistoryIndex"], "readwrite");
-    var deepHistoryIndex = transaction.objectStore("DeepHistoryIndex");
+  /*IndexedDb Stuff*/
+  IdbClient = new IdbClient('DeepHistory', localStorage['DeepHistoryVersion'], 'DeepHistoryIndex');
+  
+  IdbClient.setUpgradeNeeded(function(event){
+    console.log('IndexedDb: onupgradeneeded  fired');
+    IdbClient.db = event.target.result;
+    var storeNames = IdbClient.db.objectStoreNames;
+
+    for(var i in storeNames){
+      if( storeNames[i] == 'DeepHistoryIndex'){
+        console.log('Store: DeepHistoryIndex Exits. DELTING IT');
+        IdbClient.db.deleteObjectStore('DeepHistoryIndex');
+      }
+    }
+    // Create an objectStore for this database
+    IdbClient.db.createObjectStore("DeepHistoryIndex", { keyPath: "timestamp" });
+  });
+
+  IdbClient.open(function(){
     var searchCache = sm.persist('searchCache');
-    var record = null;
-    var request = deepHistoryIndex.openCursor();
     var sizeCalcArray = [];
     var totalDBSize = 0.0;
     var cacheSize = 0.0;
     var MAX_DB_SIZE = 700;//kB
-    //PUT TERMS INTO SEARCH CACHE
-    var start = sm.currentTime();
+    var start = sm.currentTime();    
+    bsmdl.db = IdbClient.db;
     console.log('PUTTING TERMS INTO SEARCH CACHE');
-    request.onsuccess = function(event) {
-      //This is where I would put logic to only cache last X days of DB
-      var cursor = event.target.result;
-      if(cursor) {
-        record = cursor.value;
-        if(sm.currentTime() - record.timestamp < sm.MAX_AGE){
+    
+    IdbClient.forEach(function(record){//forEach record
+      if(sm.currentTime() - record.timestamp < sm.MAX_AGE){
           searchCache.push( { timestamp : record.timestamp, url : record.url, 
                               terms : record.terms, title : record.title, size : record.size} );
           cacheSize += parseFloat(record.size);
         }
         totalDBSize += parseFloat(record.size);
         sizeCalcArray.push( record );
-        cursor.continue();
-      } else {
-        console.log('>>> FINISHED PUTTING TERMS INTO SEARCH CACHE IN ' + sm.secDiff(start) + 'sec');
-        //DB size limiting emulation
-        sm.dbSize(totalDBSize);
-        sm.cacheSize(cacheSize);
-        console.log('DB size is ' + totalDBSize + 'kB' );
-        console.log('MAX_DB_SIZE is ' + MAX_DB_SIZE + 'kB' );
-        /*
-        var dbSizeDiff = 0.0;
-        var sizeDeletedRecords = 0.0;
-        if(totalDBSize > MAX_DB_SIZE){
-          dbSizeDiff = totalDBSize - MAX_DB_SIZE;
-          console.log('MAX_DB_SIZE Exceeded by ' + dbSizeDiff);
-          for(var i in sizeCalcArray){
-            if(sizeDeletedRecords < dbSizeDiff){
-              sizeDeletedRecords += parseFloat(sizeCalcArray[i].size);
-              console.log('Deleted ' + sizeCalcArray[i].title + ' FROM DB Size: ' + sizeCalcArray[i].size);
-              for(var x in searchCache){//would be in indexedDb delete operation callback
-                if(searchCache[x].timestamp == sizeCalcArray[i].timestamp)
-                  console.log('Deleted ' + searchCache[x].title + ' FROM CACHE');//use splice
-              }
-            }else{
-              console.log('>>>> Total kB Deleted: ' + sizeDeletedRecords + ' In ' + sm.secDiff(start) + 'sec');
-              break;
-            }
-          }
-        }//end DB Size limiting emulation
-        */
-      }
+    
+    }, function(){//onComplete
+      sm.dbSize(totalDBSize);
+      sm.cacheSize(cacheSize);
+      console.log('>>> FINISHED PUTTING TERMS INTO SEARCH CACHE IN ' + sm.secDiff(start) + 'sec');
+      console.log('DB size is ' + totalDBSize + 'kB' );
+      console.log('MAX_DB_SIZE is ' + MAX_DB_SIZE + 'kB' );
       sm.persist('searchCache', searchCache);
-    
-    };
-
-  };
-  request.onupgradeneeded = function(event) { 
-    console.log('IndexedDb: onupgradeneeded  fired');
-    bsmdl.db = event.target.result;
-    //Test for Store, if there delete it
-    var storeNames = bsmdl.db.objectStoreNames;
-
-    for(var i in storeNames){
-      if( storeNames[i] == 'DeepHistoryIndex'){
-        console.log('Store: DeepHistoryIndex Exits. DELTING IT');
-        bsmdl.db.deleteObjectStore('DeepHistoryIndex');
-      }
+      console.log(searchCache);
+    });
+      
+  });
+  
+  chrome.permissions.remove({permissions : ['history']}, function(granted){
+    if(granted == true){
+      console.log('History permission is removed');
     }
-    
-    // Create an objectStore for this database
-    bsmdl.store = bsmdl.db.createObjectStore("DeepHistoryIndex", { keyPath: "timestamp" });
-  };
+  });
 }();
 
 })();
