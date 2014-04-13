@@ -59,7 +59,7 @@ MMCD.classes.IdbClient = function(dbName, dbVersion, defaultStore) {
 MMCD.classes.IdbClient.prototype.open = function(onsuccess, onerror){
   var _self = this;
   var onsuccess = onsuccess || function(){console.log(_self.name + ' Successfully Opened.')};
-  var onerror = onerror || function(){console.log(_self.name + ' Not Opened.')};
+  var onerror = onerror || function(e){console.log(_self.name + ' Not Opened.'); console.log(e);};
 
   try{
     var dbOpenRequest = indexedDB.open(this.name, this.version);
@@ -108,8 +108,8 @@ MMCD.classes.IdbClient.prototype.getStore = function(storeName){
 }
 /*If key exists it fail, if not it will add it*/
 MMCD.classes.IdbClient.prototype.addRecord = function(record, onsuccess, onerror){
-  var onsuccess = onsuccess || function(){console.log('Record Added.')};
-  var onerror = onerror || function(){console.log('Record Not Added.')};
+  var onsuccess = onsuccess || function(){console.log('Record Added.');};
+  var onerror = onerror || function(e){console.log('Record Not Added.'); console.log(e);};
   var _self = this;
   var store = _self.getStore();
   var req = null;
@@ -125,7 +125,7 @@ MMCD.classes.IdbClient.prototype.addRecord = function(record, onsuccess, onerror
 /*If key exists it will modify the reocord, if not it will add it*/
 MMCD.classes.IdbClient.prototype.updateRecord = function(record, onsuccess, onerror){
   var onsuccess = onsuccess || function(){console.log('Record Updated.')};
-  var onerror = onerror || function(){console.log('Record Not Updated.')};
+  var onerror = onerror || function(e){console.log('Record Not Updated.'); console.log(e);};
   var _self = this;
   var store = _self.getStore();
   var req = null;
@@ -165,7 +165,7 @@ MMCD.classes.IdbClient.prototype.forEach = function(mapFunct, onComplete, onerro
   if( !isFunc(mapFunct) )
     return null;
     
-  var onerror = onerror || function(){console.log('Cursor Not Opened.')};
+  var onerror = onerror || function(e){console.log('Cursor Not Opened.'); console.log(e);};
   var _self = this;
   var store = _self.getStore();
   var req = null;

@@ -15,7 +15,8 @@ MMCD.managers.State = (function(){
     PROCESS_DELAY_TIME,
     isExtenstionEnabled,
     isUpdateAvailable,
-    lastKeyAdded;
+    lastKeyAdded,
+    TARGET_COMPRESSION;
   
   (initManager = function(){
     _this.currPageUrl = '';
@@ -26,6 +27,7 @@ MMCD.managers.State = (function(){
     MAX_AGE = HOUR * 72;//
     PROCESS_DELAY_TIME = 1 * SECS;
     UPDATE_URL = 'http://deeperhistory.wordpress.com/notify-if-update-available/';
+    TARGET_COMPRESSION = 0.35;
     _this.highlightLoop = null;
     localStorage['DeepHistoryMAX_AGE'] = MAX_AGE;
     _this.matchFound = false;
@@ -44,7 +46,7 @@ MMCD.managers.State = (function(){
       processQueue : [],
       cache : { sites : {} },
       searchCache : [],
-      resultCache : []
+      resultCache : []     
     }
   })();
   return {
@@ -59,6 +61,7 @@ MMCD.managers.State = (function(){
     MAX_AGE : MAX_AGE,
     UPDATE_URL : UPDATE_URL,
     PROCESS_DELAY_TIME : PROCESS_DELAY_TIME,
+    TARGET_COMPRESSION : TARGET_COMPRESSION,
     dbSize : MMCD.getSet(_this.dbSize),
     cacheSize : MMCD.getSet(_this.cacheSize),
     isExtenstionEnabled : MMCD.getSet(_this.isExtenstionEnabled),
@@ -83,6 +86,12 @@ MMCD.managers.State = (function(){
     },
     resetManager : function(){
       initManager();
+    },
+    ls : function(key, value){
+      if(typeof value == 'undefined')
+        return localStorage[key];
+      else
+        localStorage[key] = value;
     }
   }
 })();

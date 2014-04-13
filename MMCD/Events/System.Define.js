@@ -100,12 +100,12 @@ function runtimeOnConnect(port) {
               var contentLength = site['buffer'].length;
               if(typeof host['decoration'] == 'undefined'){
                 getDecoration(host, site, siteUrl, dmp);
-              }else if(host['decoration'].length < ((parseFloat(contentLength) * 0.50))){//targeting 15% reduction in length
+              }else if(host['decoration'].length < ((parseFloat(contentLength) * sm.TARGET_COMPRESSION))){//targeting 15% reduction in length
                 console.log('INSUFFICIENT COMPRESSION: ' + (host['decoration'].length / contentLength));
                 getDecoration(host, site, siteUrl, dmp);//if not meeting reduction, we try again
               }
               if(typeof host['decoration'] != 'undefined')
-                console.log(host['decoration'].length + ' ' + ((parseFloat(contentLength) * 0.50)));
+                console.log(host['decoration'].length + ' ' + ((parseFloat(contentLength) * sm.TARGET_COMPRESSION)));
                 
               console.log('BEFORE DR: ' + ((site['buffer'].length * 16) / (8*1024)).toPrecision(3) + 'kB');
               if(typeof host['decoration'] != 'undefined')
@@ -123,7 +123,7 @@ function runtimeOnConnect(port) {
               queueItem['timestamp'] = timestamp;
               if(sm.isExtenstionEnabled() == true)
                 sm.persist('processQueue').push(queueItem);
-              
+
             //there is pre-existing html, do a diff
             }else{
               console.log('BEFORE DR: ' + ((site['buffer'].length * 16) / (8*1024)).toPrecision(3) + 'kB');
@@ -325,7 +325,7 @@ function process(queueItem, start){
     return;
     
   var url, timestamp, site, tagsStripped = '',whitespaceStripped = '', nextQueueItem, scriptsStripped, urlStripped, styleScripped,
-      processQueue = sm.persist('processQueue');
+      processQueue = sm.persist('processQueue'), storeObj = null;
   
   url = queueItem['url'];
   timestamp = queueItem['timestamp'];
@@ -336,42 +336,31 @@ function process(queueItem, start){
         console.log('Could not removing articles in alloted time. Placing back on queue. Returning');
         process(-1);
       }
-    /*
-    var tagsStripped = '',
-      whitespaceStripped = '', 
-      scriptsStripped = '', 
-      styleStripped = '',
-      escapesStripped = '',
-      duplicatesStripped = '',
-      commonsStripped = '',
-      tagsStripped = '',
-      commentsStripped = '',
-      output = '';
-      
-    commentsStripped = strm.removeComments( site[timestamp] );
-    scriptsStripped = strm.removeScripts( commentsStripped );
-    styleStripped = strm.removeStyles( scriptsStripped );
-    tagsStripped = strm.removeTags( styleStripped );
-    duplicatesStripped = strm.removeDuplicates( tagsStripped );
-    commonsStripped = strm.removeCommons( duplicatesStripped );
-    escapesStripped = strm.removeEscapes( commonsStripped );
-    site[timestamp] = strm.removeWhitespace( escapesStripped );
-    
-    var size = ((site[timestamp].length * 16) / (8*1024)).toPrecision(3);
-    console.log('FINAL OUTPUT: ' + size + ' kB');
-    console.log('Time Elapsed After Compression: ' +  sm.secDiff(start) );
-    */
+
     if( processQueue.length > 0 ){
+      /*
       var transaction = bsmdl.db.transaction(["DeepHistoryIndex"], "readwrite");
       var deepHistoryIndex = transaction.objectStore("DeepHistoryIndex");
+      */
       var size = ((site[timestamp].length * 16) / (8*1024)).toPrecision(3);
       if(sm.lastKeyAdded() == timestamp){
           console.log('timestamp is same as last. was ' + timestamp + ' now it is ' + (timestamp + 1));
           timestamp++;
           
         }
-      var storeObj = {timestamp : timestamp, url : url, terms : site[timestamp], title : site['title'], size : size  };
+      storeObj = {timestamp : timestamp, url : url, terms : site[timestamp], title : site['title'], size : size  };
+      
+      IdbClient.addRecord(storeObj, function(){
+        var searchCache = sm.persist('searchCache');
+        sm.dbSize( sm.dbSize() + parseFloat(size) );
+        sm.cacheSize( sm.cacheSize() + parseFloat(size) );
+        searchCache.push( storeObj );
+        console.log('Finished processing "' +storeObj.title + '" . Moving To Next Item. It is ' + storeObj.size + 'kb. ' + sm.secDiff(start) + ' Sec');
+        MMCD_USAGE.processOccuranceByUser(MMCD_USAGE.EVENTS.page_indexed);
+      });  
+      
       sm.lastKeyAdded( storeObj.timestamp );
+      /*
       var request = deepHistoryIndex.add( storeObj );
       
       request.onsuccess = function(event) {
@@ -384,15 +373,16 @@ function process(queueItem, start){
         MMCD_USAGE.processOccuranceByUser(MMCD_USAGE.EVENTS.page_indexed);
       };
       request.onerror = function(e){ console.log('ADD ERROR'); console.log(e.target);};
+      */
       nextQueueItem = processQueue.splice(0,1)[0];
-      console.log('Finished processing "' + site['title'] + '" . Moving To Next Item. It is ' + size + 'kb. ' + sm.secDiff(start) + ' Sec');
+      
       process( nextQueueItem, start );
     }else{
-      var size = ((site[timestamp].length * 16) / (8*1024)).toPrecision(3);
-      console.log('QUEUE EMPTY: Finished processing "' + site['title'] + '" It is ' + size + 'kb. ' + sm.secDiff(start) + ' Sec');
+      
       //console.log(site[timestamp]);
       //Store The Index
       if(site[timestamp] != ''){
+      /*
         var transaction = bsmdl.db.transaction(["DeepHistoryIndex"], "readwrite");
         var deepHistoryIndex = transaction.objectStore("DeepHistoryIndex");
         
@@ -410,9 +400,24 @@ function process(queueItem, start){
           MMCD_USAGE.processOccuranceByUser(MMCD_USAGE.EVENTS.page_indexed);
         };
         request.onerror = function(e){ console.log('ADD ERROR'); console.log(e.target);};
+        */
+        
+        var size = ((site[timestamp].length * 16) / (8*1024)).toPrecision(3);
+        storeObj = {timestamp : timestamp, url : url, terms : site[timestamp], title : site['title'], size : size  };
+        
+        
+        IdbClient.addRecord(storeObj, function(){
+          var searchCache = sm.persist('searchCache');
+          sm.dbSize( sm.dbSize() + parseFloat(size) );
+          sm.cacheSize( sm.cacheSize() + parseFloat(size) );
+          searchCache.push( storeObj );
+          console.log('QUEUE EMPTY: Finished processing "' + storeObj.title + '" It is ' + storeObj.size + 'kb. ' + sm.secDiff(start) + ' Sec');
+          MMCD_USAGE.processOccuranceByUser(MMCD_USAGE.EVENTS.page_indexed);
+        });  
       }else{
         console.log('DB Entry Rejected: Empty Input');
       }
+      
       process(-1);
     } 
     
@@ -731,11 +736,11 @@ MMCD.hook.onStart = function(){
   //MMCD_USAGE.printTableNames(true);
   setInterval(processLoop, 1000);
   
-  localStorage['DeepHistoryVersion'] = 11;
-  localStorage['highlightColor'] = 'default';
+  sm.ls('DeepHistoryVersion', 11);
+  sm.ls('highlightColor', 'default');
   
   /*IndexedDb Stuff*/
-  IdbClient = new IdbClient('DeepHistory', localStorage['DeepHistoryVersion'], 'DeepHistoryIndex');
+  IdbClient = new IdbClient('DeepHistory', sm.ls('DeepHistoryVersion') , 'DeepHistoryIndex');
   
   IdbClient.setUpgradeNeeded(function(event){
     console.log('IndexedDb: onupgradeneeded  fired');

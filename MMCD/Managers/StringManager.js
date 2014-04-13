@@ -9,14 +9,21 @@ MMCD.managers.String = (function(){
 
 return {
   wordsToRemove : wordsToRemove,
-  removeTags : function(input){
-    var regexTags = /<.*?>/gi;
-    var regexNoscriptTags = /&lt;.*?&gt;/gi;
-    input = input.replace(regexNoscriptTags, ' ').replace(/\s+/g,' ');
+  removeEmbeddedTags : function(input){
+    var regexTags = /<[^<]+?>/g;
     return input.replace(regexTags, ' ').replace(/\s+/g,' ');
   },
+  removeTags : function(input){
+    var regexTags = /<.*?>/g;
+    input = this.removeEmbeddedTags(input);
+    return input.replace(regexTags, ' ').replace(/\s+/g,' ');;
+  },
+  removeNoScriptTags : function(input){
+    var regexNoscriptTags = /&lt;.*?&gt;/g;
+    return input.replace(regexNoscriptTags, ' ').replace(/\s+/g,' ');
+  },
   removeComments : function(input){
-    var regex = /<!--.*?-->/gi;
+    var regex = /<!--.*?-->/g;
     return input.replace(regex, ' ').replace(/\s+/g,' ');
   },
   removeScripts : function(input){
@@ -68,9 +75,10 @@ return {
     output = this.removeScripts( output );
     output = this.removeStyles( output );
     output = this.removeTags( output );
-    output = this.removeDuplicates( output );
     output = this.removeCommons( output );
+    output = this.removeNoScriptTags( output );
     output = this.removeEscapes( output );
+    output = this.removeDuplicates( output );
     return this.removeWhitespace( output );
   },
   getHostName : function(input){
