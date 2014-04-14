@@ -17,8 +17,8 @@ MMCD = (typeof MMCD != 'undefined') ? MMCD : {
     test_folder : 'MMCD/Tests',
     events_folder : 'MMCD/Events',
     //MODULES
-    models : ['BrowserStorage', 'IdbClient'],
-    managers : ['Utility','Port','State','Tab', 'String'],
+    models : ['IdbClient'],
+    managers : ['Utility','Port','State','Tab', 'String','Crypto'],
     controllers : [],
     events : ['System.Define'],
     tests : [],  /*model.chrome.Tab,'manager.Html','model.BrowserStorage'*/
@@ -83,10 +83,11 @@ MMCD = (typeof MMCD != 'undefined') ? MMCD : {
   global: {},
   hook : {},//currently defined in System.Define
   getManager : function(managerName){
-    if(typeof this.managers[managerName] != 'undefined')
+    if(typeof this.managers[managerName] != 'undefined'){
       return this.managers[managerName];
-    else
+    }else{
       return null;
+    }
   },
   getModel : function(className){
     if(typeof this.classes[className] != 'undefined')

@@ -13,7 +13,6 @@ highlightColor
 var MY_NAME = 'System.Define';
 var emptyFunction = function(){};
 //Models
-var bsmdl = MMCD.getModel('BrowserStorage');
 var IdbClient = MMCD.classes.IdbClient;
 
 //Managers
@@ -22,6 +21,7 @@ var um = MMCD.getManager('Utility');
 var pm = MMCD.getManager('Port');
 var sm = MMCD.getManager('State');
 var strm = MMCD.getManager('String');
+var cm = MMCD.getManager('Crypto');
 var highlightLoop = null;
 
 function runtimeOnInstalled(){
@@ -33,8 +33,8 @@ function getDecoration(host, site, siteUrl, dmp){
   var thisDecoration = '';
   var lastDecoration = '';
   for(var url in host){
-    console.log('Diffing: ' + url + ' to ' + siteUrl);
     if(url != 'decoration' && url != siteUrl){
+      console.log('Diffing: ' + url + ' to ' + siteUrl);
       try{
         diffResults = dmp.diff_main(host[url]['buffer'], site['buffer']);
         dmp.diff_cleanupSemantic(diffResults);
@@ -258,8 +258,7 @@ function tabsOnActivated(tab) {
       tm.lastId(tm.currId());
       tm.currTitle(tab.title);
       sm.currPageUrl(tab.url);
-      'Current Tab#: %s Activated. Last Tab# %s Has Port Open: %s Page Title: %s'
-      , tm.currId(), tm.lastId(), pm.hasPorts(tm.currId()), tm.currTitle()
+
       um.log('tabsOnActivated', um.printf('Current Tab#: %s Activated. Last Tab# %s Has Port Open: %s Page Title: %s, url: %s'
                         , tm.currId(), tm.lastId(), pm.hasPorts(tm.currId()), tm.currTitle(), sm.currPageUrl()),MY_NAME,2);
       try{//Should use
@@ -321,107 +320,67 @@ function tabsOnUpdated(tabId, changeInfo, tab){
 }
 
 function process(queueItem, start){
+  //sanity check and base case
   if(queueItem == -1 || typeof queueItem == 'undefined')
     return;
-    
-  var url, timestamp, site, tagsStripped = '',whitespaceStripped = '', nextQueueItem, scriptsStripped, urlStripped, styleScripped,
-      processQueue = sm.persist('processQueue'), storeObj = null;
+  //time splitting
+  if( sm.secDiff(start) > 1 ){
+    processQueue.splice(0,1,queueItem);
+    console.log('Could not removing articles in alloted time. Placing back on queue. Returning');
+    process(-1);
+  }
   
+  var url, timestamp, site, tagsStripped = '',whitespaceStripped = '', nextQueueItem, scriptsStripped, urlStripped, styleScripped,
+      processQueue = sm.persist('processQueue'), storeObj = null, terms = '';
+  
+  //get data to be processed
   url = queueItem['url'];
   timestamp = queueItem['timestamp'];
   site = sm.persist('cache')['sites'][strm.getHostName(url)][url];
+  
+  
+  
   if(typeof site != 'undefined'){
-    if( sm.secDiff(start) > 1 ){
-        processQueue.splice(0,1,queueItem);
-        console.log('Could not removing articles in alloted time. Placing back on queue. Returning');
-        process(-1);
-      }
-
+    
+    //do process
+    if(site[timestamp] != ''){
+      //need to see if user wants encryption
+      terms = cm.encrypt( site[timestamp] ); //CRYPTO >>>
+      
+      var size = ((terms.length * 16) / (8*1024)).toPrecision(3);
+      storeObj = {timestamp : timestamp, url : url, terms : terms, title : site['title'], size : size, encrypted : true  };
+      //prevent duplicate key failure
+      if(sm.lastKeyAdded() == timestamp)
+        timestamp++;
+      
+      IdbClient.addRecord(storeObj, function(addedRecord){
+        var searchCache = sm.persist('searchCache');
+        sm.dbSize( sm.dbSize() + parseFloat(size) );
+        sm.cacheSize( sm.cacheSize() + parseFloat(size) );
+        
+        //if encryptin running then do this
+        addedRecord.terms = site[timestamp];//unencrypted terms for cache  //CRYPTO >>>
+        
+        searchCache.push( addedRecord );
+        sm.lastKeyAdded( addedRecord.timestamp );
+        console.log('QUEUE EMPTY: Finished processing "' + addedRecord.title + '" It is ' + addedRecord.size + 'kb. ' + sm.secDiff(start) + ' Sec');
+        MMCD_USAGE.processOccuranceByUser(MMCD_USAGE.EVENTS.page_indexed);
+      });
+      
+    }else{
+      console.log('DB Entry Rejected: Empty Input');
+    }
+    //What's the next processing move?
     if( processQueue.length > 0 ){
-      /*
-      var transaction = bsmdl.db.transaction(["DeepHistoryIndex"], "readwrite");
-      var deepHistoryIndex = transaction.objectStore("DeepHistoryIndex");
-      */
-      var size = ((site[timestamp].length * 16) / (8*1024)).toPrecision(3);
-      if(sm.lastKeyAdded() == timestamp){
-          console.log('timestamp is same as last. was ' + timestamp + ' now it is ' + (timestamp + 1));
-          timestamp++;
-          
-        }
-      storeObj = {timestamp : timestamp, url : url, terms : site[timestamp], title : site['title'], size : size  };
-      
-      IdbClient.addRecord(storeObj, function(){
-        var searchCache = sm.persist('searchCache');
-        sm.dbSize( sm.dbSize() + parseFloat(size) );
-        sm.cacheSize( sm.cacheSize() + parseFloat(size) );
-        searchCache.push( storeObj );
-        console.log('Finished processing "' +storeObj.title + '" . Moving To Next Item. It is ' + storeObj.size + 'kb. ' + sm.secDiff(start) + ' Sec');
-        MMCD_USAGE.processOccuranceByUser(MMCD_USAGE.EVENTS.page_indexed);
-      });  
-      
-      sm.lastKeyAdded( storeObj.timestamp );
-      /*
-      var request = deepHistoryIndex.add( storeObj );
-      
-      request.onsuccess = function(event) {
-        console.log('Object Stored & Added To Cache with timestamp = ');
-        console.log(event);
-        var searchCache = sm.persist('searchCache');
-        sm.dbSize( sm.dbSize() + parseFloat(size) );
-        sm.cacheSize( sm.cacheSize() + parseFloat(size) );
-        searchCache.push( storeObj );
-        MMCD_USAGE.processOccuranceByUser(MMCD_USAGE.EVENTS.page_indexed);
-      };
-      request.onerror = function(e){ console.log('ADD ERROR'); console.log(e.target);};
-      */
       nextQueueItem = processQueue.splice(0,1)[0];
-      
       process( nextQueueItem, start );
     }else{
-      
-      //console.log(site[timestamp]);
-      //Store The Index
-      if(site[timestamp] != ''){
-      /*
-        var transaction = bsmdl.db.transaction(["DeepHistoryIndex"], "readwrite");
-        var deepHistoryIndex = transaction.objectStore("DeepHistoryIndex");
-        
-        
-        
-        var storeObj = {timestamp : timestamp, url : url, terms : site[timestamp], title : site['title'], size : size };
-        
-        var request = deepHistoryIndex.add( storeObj );
-        request.onsuccess = function(event) {
-          console.log('Object Stored & Added To Cache');
-          var searchCache = sm.persist('searchCache');
-          searchCache.push( storeObj );
-          sm.dbSize( sm.dbSize() + parseFloat(size) );
-          sm.cacheSize( sm.cacheSize() + parseFloat(size) );
-          MMCD_USAGE.processOccuranceByUser(MMCD_USAGE.EVENTS.page_indexed);
-        };
-        request.onerror = function(e){ console.log('ADD ERROR'); console.log(e.target);};
-        */
-        
-        var size = ((site[timestamp].length * 16) / (8*1024)).toPrecision(3);
-        storeObj = {timestamp : timestamp, url : url, terms : site[timestamp], title : site['title'], size : size  };
-        
-        
-        IdbClient.addRecord(storeObj, function(){
-          var searchCache = sm.persist('searchCache');
-          sm.dbSize( sm.dbSize() + parseFloat(size) );
-          sm.cacheSize( sm.cacheSize() + parseFloat(size) );
-          searchCache.push( storeObj );
-          console.log('QUEUE EMPTY: Finished processing "' + storeObj.title + '" It is ' + storeObj.size + 'kb. ' + sm.secDiff(start) + ' Sec');
-          MMCD_USAGE.processOccuranceByUser(MMCD_USAGE.EVENTS.page_indexed);
-        });  
-      }else{
-        console.log('DB Entry Rejected: Empty Input');
-      }
-      
       process(-1);
     } 
     
-  }else{console.log('Site was undefined');}
+  }else{
+    console.log('Site was undefined');
+  }
   
   
 }
@@ -736,17 +695,29 @@ MMCD.hook.onStart = function(){
   //MMCD_USAGE.printTableNames(true);
   setInterval(processLoop, 1000);
   
-  sm.ls('DeepHistoryVersion', 11);
+  sm.ls('DeepHistoryVersion', 16);
   sm.ls('highlightColor', 'default');
   
   /*IndexedDb Stuff*/
   IdbClient = new IdbClient('DeepHistory', sm.ls('DeepHistoryVersion') , 'DeepHistoryIndex');
   
-  IdbClient.setUpgradeNeeded(function(event){
-    console.log('IndexedDb: onupgradeneeded  fired');
-    IdbClient.db = event.target.result;
+  /*Version Upgrade functions
+    Need to move to separate file
+    versionXUpgrade - callback in forEach to add encrypted field
+    deleteAndReinitStore - just what it sounds like
+  */
+  function version16Upgrade(record){
+    var IdbClient = this;
+    if(typeof record.encrypted === 'undefined'){
+      record.encrypted = false;
+      IdbClient.updateRecord(record);
+    }
+  }
+  
+  function deleteAndReinitStore(){
+    var IdbClient = this;
     var storeNames = IdbClient.db.objectStoreNames;
-
+    
     for(var i in storeNames){
       if( storeNames[i] == 'DeepHistoryIndex'){
         console.log('Store: DeepHistoryIndex Exits. DELTING IT');
@@ -755,26 +726,59 @@ MMCD.hook.onStart = function(){
     }
     // Create an objectStore for this database
     IdbClient.db.createObjectStore("DeepHistoryIndex", { keyPath: "timestamp" });
+  }
+
+  function updateStoreByVersion(version){
+    switch( parseInt(version) ){
+      case 16:
+        IdbClient.forEach(version16Upgrade);
+        break;
+    }
+  }
+  /*End upgrade funtions*/
+  
+  /*Can only perform store deletes and creations here, any mods to
+  store structure have to be done elsewhere*/
+  IdbClient.setUpgradeNeeded(function(event){
+    IdbClient.initDb(event.target.result);
+    console.log('onupgradeneeded  fired On Version: ' + sm.ls('DeepHistoryVersion'));
   });
 
   IdbClient.open(function(){
+    /*IF user DB version is <= 16 we fire a forEach that checks for encrypted flag on
+    every record. If it's not there we know they have no encrypted record create/set the field
+    to false. Unfortunately we will do this check everytime if they remain on 16. 
+    
+    Other possible downside is a user that had < 16 but jumped right to 17. Will need yo put logic
+    to recognize if version is > 11 (version every one is currently on) and do the check.
+    
+    USE LOCALSTORE TO SIGNIFY IF THIS UPGRADE HAS HAPPENED SO WE DON'T DOUBLE TRAVERSE EVERY STARTUP
+    */
+    
+    updateStoreByVersion( sm.ls('DeepHistoryVersion') );
+    
     var searchCache = sm.persist('searchCache');
     var sizeCalcArray = [];
     var totalDBSize = 0.0;
     var cacheSize = 0.0;
     var MAX_DB_SIZE = 700;//kB
     var start = sm.currentTime();    
-    bsmdl.db = IdbClient.db;
     console.log('PUTTING TERMS INTO SEARCH CACHE');
     
     IdbClient.forEach(function(record){//forEach record
       if(sm.currentTime() - record.timestamp < sm.MAX_AGE){
-          searchCache.push( { timestamp : record.timestamp, url : record.url, 
-                              terms : record.terms, title : record.title, size : record.size} );
-          cacheSize += parseFloat(record.size);
+      
+        //CRYPTO >>> decrypt encrypted records
+        if(typeof record.encrypted !== 'undefined' && record.encrypted == true){
+          record.terms = cm.decrypt( record.terms );
         }
-        totalDBSize += parseFloat(record.size);
-        sizeCalcArray.push( record );
+        
+        searchCache.push( { timestamp : record.timestamp, url : record.url, 
+                            terms : record.terms, title : record.title, size : record.size} );
+        cacheSize += parseFloat(record.size);
+      }
+      totalDBSize += parseFloat(record.size);
+      sizeCalcArray.push( record );
     
     }, function(){//onComplete
       sm.dbSize(totalDBSize);

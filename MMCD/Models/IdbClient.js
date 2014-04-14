@@ -55,6 +55,12 @@ MMCD.classes.IdbClient = function(dbName, dbVersion, defaultStore) {
     this.defaultStore = defaultStore;
 }
 
+MMCD.classes.IdbClient.prototype.initDb = function(db){
+  var _self = this;
+  _self.db = db;
+  _self.isOpen = true;
+  _self.stores = _self.db.objectStoreNames;
+}
 
 MMCD.classes.IdbClient.prototype.open = function(onsuccess, onerror){
   var _self = this;
@@ -72,9 +78,7 @@ MMCD.classes.IdbClient.prototype.open = function(onsuccess, onerror){
     };
     
     dbOpenRequest.onsuccess = function(e) {
-      _self.db = e.target.result;
-      _self.isOpen = true;
-      _self.stores = _self.db.objectStoreNames;
+      _self.initDb(e.target.result);
       executeCallback(onsuccess);
     };
   }catch(err){
@@ -88,12 +92,10 @@ MMCD.classes.IdbClient.prototype.setDefaultStore = function(storeName){
 }
 
 MMCD.classes.IdbClient.prototype.setUpgradeNeeded = function(onupgradeneeded){
-
-  if( isFunc(onupgradeneeded) ){
-    console.log('SETTIGN');
+  if( isFunc(onupgradeneeded) )
     this.onupgradeneeded = onupgradeneeded;
-  }
 }
+
 /*Used everywhere to do transactions. Set default storename before 
 a call to this to get other stores*/
 MMCD.classes.IdbClient.prototype.getStore = function(storeName){
@@ -106,32 +108,53 @@ MMCD.classes.IdbClient.prototype.getStore = function(storeName){
   }
   
 }
-/*If key exists it fail, if not it will add it*/
+/*If key exists it fail, if not it will add it
+onsuccess callbacks have the added record passed in
+*/
 MMCD.classes.IdbClient.prototype.addRecord = function(record, onsuccess, onerror){
-  var onsuccess = onsuccess || function(){console.log('Record Added.');};
+  var _onsuccess = null;
+  if( isFunc(onsuccess) ){
+    _onsuccess = function(){
+      onsuccess.call(null, record);
+    }
+  }else{
+    _onsuccess = function(){console.log('Record Added.');};
+  }
+
+  
   var onerror = onerror || function(e){console.log('Record Not Added.'); console.log(e);};
   var _self = this;
   var store = _self.getStore();
   var req = null;
   if( isSet(store) ){
     req = store.add(record);
-    req.onsuccess = onsuccess;
+    req.onsuccess = _onsuccess;
     req.onerror = onerror;
   }else{
     throw 'Could not create transaction on store ' + _self.defaultStore;
   }
   
 }
-/*If key exists it will modify the reocord, if not it will add it*/
+/*If key exists it will modify the reocord, if not it will add it
+  onsuccess callbacks have the added record passed in
+*/
 MMCD.classes.IdbClient.prototype.updateRecord = function(record, onsuccess, onerror){
-  var onsuccess = onsuccess || function(){console.log('Record Updated.')};
+  var _onsuccess = null;
+  if( isFunc(onsuccess) ){
+    _onsuccess = function(){
+      onsuccess.call(null, record);
+    }
+  }else{
+    _onsuccess = function(){console.log('Record Updated.');};
+  }
+
   var onerror = onerror || function(e){console.log('Record Not Updated.'); console.log(e);};
   var _self = this;
   var store = _self.getStore();
   var req = null;
   if( isSet(store) ){
     req = store.put(record);
-    req.onsuccess = onsuccess;
+    req.onsuccess = _onsuccess;
     req.onerror = onerror;
   }else{
     throw 'Could not create transaction on store ' + _self.defaultStore;
@@ -159,7 +182,8 @@ MMCD.classes.IdbClient.prototype.deleteRecord = function(key, onsuccess, onerror
 }
 
 /*mapFunct must be a function that take a record object.
-mapFunct will perform some function on each record*/
+mapFunct will perform some function on each record. 'this'
+in mapFunt is set to this IdbClient so you can do things like update records*/
 MMCD.classes.IdbClient.prototype.forEach = function(mapFunct, onComplete, onerror){
   
   if( !isFunc(mapFunct) )
@@ -174,7 +198,7 @@ MMCD.classes.IdbClient.prototype.forEach = function(mapFunct, onComplete, onerro
     req.onsuccess = function(e){
       var cursor = e.target.result;
       if(cursor) {
-        mapFunct.call( null, cursor.value );
+        mapFunct.call( _self, cursor.value );//pass myself (IdbClient) to callback
         cursor.continue();
       } else {
         if( isFunc(onComplete) )

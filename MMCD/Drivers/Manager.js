@@ -15,5 +15,5 @@
     loadManagers(remainingScripts);
   }
   
-  loadManagers(config.managers);
+  loadManagers(config.managers.reverse());
 })(MMCD.config);
