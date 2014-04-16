@@ -107,10 +107,10 @@ function runtimeOnConnect(port) {
               if(typeof host['decoration'] != 'undefined')
                 console.log(host['decoration'].length + ' ' + ((parseFloat(contentLength) * sm.TARGET_COMPRESSION)));
                 
-              console.log('BEFORE DR: ' + ((site['buffer'].length * 16) / (8*1024)).toPrecision(3) + 'kB');
+              console.log('BEFORE DR: ' + sm.strSizeInKb(site['buffer']) + + 'kB');
               if(typeof host['decoration'] != 'undefined')
                 site['buffer'] = strm.removeDecoration(site['buffer'], host['decoration']);
-              console.log('AFTER DR: ' + ((site['buffer'].length * 16) / (8*1024)).toPrecision(3) + 'kB');
+              console.log('AFTER DR: ' + sm.strSizeInKb(site['buffer']) + + 'kB');
               console.log('FINAL COMPRESSION: ' + (host['decoration'].length / contentLength));
               //getDecoration(host, site, siteUrl, dmp);
        
@@ -126,10 +126,10 @@ function runtimeOnConnect(port) {
 
             //there is pre-existing html, do a diff
             }else{
-              console.log('BEFORE DR: ' + ((site['buffer'].length * 16) / (8*1024)).toPrecision(3) + 'kB');
+              console.log('BEFORE DR: ' + sm.strSizeInKb(site['buffer']) + 'kB');
               if(typeof host['decoration'] != 'undefined')
                 site['buffer'] = strm.removeDecoration(site['buffer'], host['decoration']);
-              console.log('AFTER DR: ' + ((site['buffer'].length * 16) / (8*1024)).toPrecision(3) + 'kB'); 
+              console.log('AFTER DR: ' + sm.strSizeInKb(site['buffer']) + 'kB'); 
               try{
                 diffResults = dmp.diff_main(site['init']['html'], site['buffer']);
                 dmp.diff_cleanupSemantic(diffResults);
@@ -138,7 +138,7 @@ function runtimeOnConnect(port) {
                 console.log(e);
                 diffResults = [];
               }
-              console.log(dmp.DIFF_EQUAL);
+
               //if there is new html, add diffObj to site obj
               for(var i in diffResults){
                 if( diffResults[i][0] == 1 ){
@@ -294,7 +294,12 @@ function tabsOnUpdated(tabId, changeInfo, tab){
     var initObj = {html : '', timestamp : timestamp}; //make class
     var siteObj = { init : initObj,  buffer : ''}; // make class
     if(typeof host[url] == 'undefined'){
+      console.log('addSite: Host URL was undefined on' + url);
       host[url] = siteObj;
+      console.log(host[url]);
+    }else{
+      console.log('addSite: Host URL was defined on ' + url);
+      console.log(host[url]);
     }
     return timestamp;
   }
@@ -346,8 +351,7 @@ function process(queueItem, start){
     if(site[timestamp] != ''){
       //need to see if user wants encryption
       terms = cm.encrypt( site[timestamp] ); //CRYPTO >>>
-      
-      var size = ((terms.length * 16) / (8*1024)).toPrecision(3);
+      var size = sm.strSizeInKb(terms.length);
       storeObj = {timestamp : timestamp, url : url, terms : terms, title : site['title'], size : size, encrypted : true  };
       //prevent duplicate key failure
       if(sm.lastKeyAdded() == timestamp)
@@ -758,27 +762,28 @@ MMCD.hook.onStart = function(){
     updateStoreByVersion( sm.ls('DeepHistoryVersion') );
     
     var searchCache = sm.persist('searchCache');
-    var sizeCalcArray = [];
+
     var totalDBSize = 0.0;
     var cacheSize = 0.0;
+    var dbRecordSize = 0.0;
     var MAX_DB_SIZE = 700;//kB
     var start = sm.currentTime();    
     console.log('PUTTING TERMS INTO SEARCH CACHE');
     
     IdbClient.forEach(function(record){//forEach record
       if(sm.currentTime() - record.timestamp < sm.MAX_AGE){
-      
+        dbRecordSize = record.size;
         //CRYPTO >>> decrypt encrypted records
         if(typeof record.encrypted !== 'undefined' && record.encrypted == true){
           record.terms = cm.decrypt( record.terms );
+          record.size = sm.strSizeInKb(record.terms);//decrypted size in cache 
         }
         
         searchCache.push( { timestamp : record.timestamp, url : record.url, 
                             terms : record.terms, title : record.title, size : record.size} );
         cacheSize += parseFloat(record.size);
       }
-      totalDBSize += parseFloat(record.size);
-      sizeCalcArray.push( record );
+      totalDBSize += parseFloat(dbRecordSize);
     
     }, function(){//onComplete
       sm.dbSize(totalDBSize);

@@ -25,7 +25,7 @@ MMCD.managers.State = (function(){
     HOUR = ( (60 * SECS) * 60);
     DAY = HOUR * 24;
     MAX_AGE = HOUR * 72;//
-    PROCESS_DELAY_TIME = 1 * SECS;
+    PROCESS_DELAY_TIME = 5 * SECS;
     UPDATE_URL = 'http://deeperhistory.wordpress.com/notify-if-update-available/';
     TARGET_COMPRESSION = 0.35;
     _this.highlightLoop = null;
@@ -92,6 +92,13 @@ MMCD.managers.State = (function(){
         return localStorage[key];
       else
         localStorage[key] = value;
+    },
+    
+    strSizeInKb : function(str){
+      var size = 0.0;
+      if(str && typeof str === 'string')
+        size = ((str.length * 16) / (8*1024)).toPrecision(3);
+      return size;
     }
   }
 })();
