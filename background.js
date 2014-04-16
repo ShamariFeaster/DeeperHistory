@@ -10,14 +10,14 @@ chrome.runtime.onInstalled.addListener(function(details){
       MMCD_USAGE.processOccuranceByUser(MMCD_USAGE.EVENTS.updated); 
       break;
   }
-
+  /*
   if(MMCD.TEST_LEVEL > 0) {
     console.log('DEV_MODE');
     chrome.tabs.create({url : "background.html"});
   }else {
     console.log('PRODUCTION_MODE');
   }
-
+  */
 });
 
 
