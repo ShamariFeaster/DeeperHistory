@@ -10,22 +10,17 @@ resultCache
 DeepHistoryVersion
 highlightColor
 */
-var Require = null;
-structureJS.module('Main', function(require){
-  Require = require;
-  });
-
+var require = structureJS.require;
 var MY_NAME = 'System.Define';
 var emptyFunction = function(){};
 //Models
-var IdbClient = Require('IdbClient');
-var tm = Require('Tab');
-var um = Require('Utility');
-var pm = Require('Port');
-var sm = Require('State');
-var strm = Require('String');
-var cm = Require('Crypto');
-console.log(Require('jquery'));
+var IdbClient = require('IdbClient');
+var tm = require('Tab');
+var um = require('Utility');
+var pm = require('Port');
+var sm = require('State');
+var strm = require('String');
+var cm = require('Crypto');
 var highlightLoop = null;
 
 function runtimeOnInstalled(){
@@ -254,8 +249,8 @@ function tabsOnActivated(tab) {
 
   if(typeof tab != 'undefined'){
     chrome.tabs.get(tab.tabId, function(tab){
-      var sm = Require('State');
-      var pm = Require('Port');
+      var sm = require('State');
+      var pm = require('Port');
       var oldId = tm.currId();
       pm.postMessageToPort(oldId, {turnOffShift : true});
       tm.currId(tab.id);
