@@ -10,7 +10,7 @@
   "icons": {
     "16": "images/brain-16.png"
   },
-  "content_security_policy": "script-src 'self' https://deeperhistory.info; object-src 'self'",
+  "content_security_policy": "script-src 'self' 'unsafe-eval' https://deeperhistory.info; object-src 'self'",
   "permissions": ["tabs"],
       "background": {
         "page": "background.html"

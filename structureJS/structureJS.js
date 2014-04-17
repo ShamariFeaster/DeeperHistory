@@ -15,6 +15,7 @@ TODO: make intialization output on/off flag in config
 var structureJS = (typeof structureJS != 'undefined') ? structureJS : {
   
   config : {
+    structureJS_base : 'structureJS/',
     module_base : 'Modules/',
     global_base : 'lib/',
     globals : [],//things like jQuery ie, we are ok with the script polluting global ns
@@ -25,13 +26,15 @@ var structureJS = (typeof structureJS != 'undefined') ? structureJS : {
                   your manifest as it will cause unindended problems with dependency resolution
                 */
     },
-  
+    uglifyMode : false,
+    compressedMode : false,
   //GENERIC ENVIRNMENT
   _needTree : {},
   _files : [],
+  _exportOrder : [],
   _modules : {},
   loadScript : function(url, callback){
-
+    console.log('Loading: ' + url);
       var head = document.getElementsByTagName('head')[0];
       var script = document.createElement('script');
       script.type = 'text/javascript';
@@ -43,42 +46,59 @@ var structureJS = (typeof structureJS != 'undefined') ? structureJS : {
 
   loadModules : function(config){
     var _this = this;
-    var globals = this.config.globals || [];
-    var commons = this.config.commons || [];
-    var globalsPlusCommons = [];
+    var globals = _this.config.globals || [];
+    var commons = _this.config.commons || [];
+    
     /*file names grom globals array are strings, where as module filenames are
     the keys of objects. The type is sentinel - TODO: find better way to do this*/
     function getFilePath(input){
       var filePath = '';
       if(typeof input != 'undefined' && typeof input === 'object')
         filePath = config.module_base + Object.keys(input)[0] + '.js';
+      else if(input == 'uglifyjs.min' || input == 'structureJSCompress')
+        filePath = config.structureJS_base + input + '.js';
       else if(typeof input === 'string')
         filePath = config.global_base + input + '.js';
-      
-      return filePath;
+
+        return filePath;
     }
     
     /*Wrap commons and push onto front of modules*/
-    for(var i = commons.length - 1; i >= 0 ; i--){
+    for(var i = commons.length - 1; i >= 0; i--){
       var obj = {}; obj[commons[i]] = null;
       _this._files.unshift(obj);
     }
-    
-    /*Put globals at the front of the line*/
+    /*put uglifyjs at front of globals if uglify mode*/
+    if(_this.uglifyMode == true) {
+      globals.unshift('uglifyjs.min');
+    }
+
+    /*Put globals at the front of the line.
+    Have to deep copy export order because we consume
+    it here. Shallow leaves us with empty exports*/
     _this._files = globals.concat(_this._files);
+    for(var i = 0; i < _this._files.length; i++){
+      _this._exportOrder.push(_this._files[i]);
+    }
 
     //recursive callback
     var callback = function(){
       var filePath = getFilePath( _this._files.shift() );
       
       if(filePath){
-        console.log('Inside callback: loading ' + filePath );
+         //console.log('Inside callback: loading ' + filePath );
         _this.loadScript(filePath, callback);
+      }else if(_this.uglifyMode == true){
+        _this.loadScript(getFilePath('structureJSCompress'), function(){
+          console.log('Modules Done Loading. Enjoy structureJS!')
+        });
       }else{
         console.log('Modules Done Loading. Enjoy structureJS!');
       }
     }
-    this.loadScript( getFilePath( _this._files.shift() ), callback );
+    var p = getFilePath( _this._files.shift() );
+    console.log('first: ' + p);
+    _this.loadScript(  p , callback );
     
   },
   /*I'm thinking I want to keep this process iterative because it will be kinder to
@@ -270,12 +290,13 @@ var structureJS = (typeof structureJS != 'undefined') ? structureJS : {
     so they can be retrieved later using 'require'*/
     moduleWrapper['module'] = executeModule.call(null, require); 
     if(typeof moduleWrapper['module'] == 'undefined')
-      throw 'Module Function Definition Must Return Something';
+      throw modName + ' FAILED: Module Function Definition Must Return Something';
     
     this._modules[modName] = moduleWrapper;
     //console.log(this._modules[modName]);
     
   },
+  
   /*I split this up because I want the module importation via require to be transparent
   to the user. so require will correctly get any type of module*/
   moduleAMD : function(modName, executeModule){
@@ -288,14 +309,21 @@ var structureJS = (typeof structureJS != 'undefined') ? structureJS : {
   },
   
   loadConfigAndManifest : function(onLoaded){
+  
     var structureTag = document.getElementById('structureJS');//returns null if not found
     if(typeof structureTag === 'undefined' || structureTag === null)
       throw 'ERROR: No script tag with ID of "structureJS" which is required';
+
     var config = structureTag.getAttribute('data-config');
     var manifest = structureTag.getAttribute('data-manifest');
-
+    var uglify = structureTag.getAttribute('data-uglify');
+    
     if(typeof manifest === 'undefined' || manifest === '' || manifest === null)
       throw 'ERROR: No manifest declared';
+      
+    if( (typeof uglify === 'undefined' || uglify !== null) && /true/i.test(uglify) == true)
+      this.uglifyMode = true;
+      
     var _this = this;
     //recursive callback
     var callback = function(){
@@ -332,5 +360,17 @@ var structureJS = (typeof structureJS != 'undefined') ? structureJS : {
   };
   window.define.amd = {jQuery : true};
   
-  structureJS.loadConfigAndManifest(structureJS.resolveDependencies);
+  var structureTag = document.getElementById('structureJS');//returns null if not found
+  if(typeof structureTag === 'undefined' || structureTag === null)
+    throw 'ERROR: No script tag with ID of "structureJS" which is required';
+  /*if user declares we are using a compressed version of ourself generated by us, then we
+  disable all module loading because structureJSCompress has already included everything*/  
+  var combined = structureTag.getAttribute('data-is-combined');
+  if(typeof combined != 'undefined' && combined !== null && /true/i.test(combined) == true){
+    //don't do shit
+  }else{
+    structureJS.loadConfigAndManifest(structureJS.resolveDependencies);
+  }
+  
+  
 })(window);
