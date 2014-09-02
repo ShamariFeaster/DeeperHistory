@@ -694,53 +694,44 @@ chrome.omnibox.setDefaultSuggestion({description : '<dim>Type ".help" For Instru
   //MMCD_USAGE.printTableNames(true);
   setInterval(processLoop, 1000);
   
-  sm.ls('DeepHistoryVersion', 16);
+  var _currentDBVersion = sm.ls('DeepHistoryVersion');
+  sm.ls('DeepHistoryVersion', 19);
   sm.ls('highlightColor', 'default');
   
   /*IndexedDb Stuff*/
   IdbClient = new IdbClient('DeepHistory', sm.ls('DeepHistoryVersion') , 'DeepHistoryIndex');
-  
-  /*Version Upgrade functions
-    Need to move to separate file
-    versionXUpgrade - callback in forEach to add encrypted field
-    deleteAndReinitStore - just what it sounds like
-  */
-  function version16Upgrade(record){
-    var IdbClient = this;
-    if(typeof record.encrypted === 'undefined'){
-      record.encrypted = false;
-      IdbClient.updateRecord(record);
-    }
-  }
-  
-  function deleteAndReinitStore(){
-    var IdbClient = this;
-    var storeNames = IdbClient.db.objectStoreNames;
-    
-    for(var i in storeNames){
-      if( storeNames[i] == 'DeepHistoryIndex'){
-        console.log('Store: DeepHistoryIndex Exits. DELTING IT');
-        IdbClient.db.deleteObjectStore('DeepHistoryIndex');
-      }
-    }
-    // Create an objectStore for this database
-    IdbClient.db.createObjectStore("DeepHistoryIndex", { keyPath: "timestamp" });
-  }
-
-  function updateStoreByVersion(version){
-    switch( parseInt(version) ){
-      case 16:
-        IdbClient.forEach(version16Upgrade);
-        break;
-    }
-  }
-  /*End upgrade funtions*/
-  
+   
   /*Can only perform store deletes and creations here, any mods to
   store structure have to be done elsewhere*/
   IdbClient.setUpgradeNeeded(function(event){
-    IdbClient.initDb(event.target.result);
-    console.log('onupgradeneeded  fired On Version: ' + sm.ls('DeepHistoryVersion'));
+  
+  console.log('onupgradeneeded  fired On Version: ' + sm.ls('DeepHistoryVersion'));
+    var defaultStoreExists = false;
+    var storeNames = IdbClient.db.objectStoreNames;
+    
+    for(var i in storeNames){
+      if( storeNames[i] == IdbClient.defaultStore){
+        defaultStoreExists = true;
+      }
+    }
+    
+    if(!defaultStoreExists){
+      console.log('Defualt store not found. Creating one');
+      IdbClient.db.createObjectStore(IdbClient.defaultStore, { keyPath: "timestamp" });
+    }
+    
+    if( parseInt( _currentDBVersion ) <= 11 ){
+      console.log('Upgrading DB to include \'encrypted\' field');  
+      IdbClient.forEach(function(record){
+         var IdbClient = this;
+        if(typeof record.encrypted === 'undefined'){
+          record.encrypted = false;
+          IdbClient.updateRecord(record);
+        }
+      });
+    }
+    
+    
   });
 
   IdbClient.open(function(){
@@ -752,10 +743,11 @@ chrome.omnibox.setDefaultSuggestion({description : '<dim>Type ".help" For Instru
     to recognize if version is > 11 (version every one is currently on) and do the check.
     
     USE LOCALSTORE TO SIGNIFY IF THIS UPGRADE HAS HAPPENED SO WE DON'T DOUBLE TRAVERSE EVERY STARTUP
+    
+    Update (9/2/14): We should check current version and if it's < 16 we should upgrade
+      it to include the 'encrypted' field.
     */
-    
-    updateStoreByVersion( sm.ls('DeepHistoryVersion') );
-    
+
     var searchCache = sm.persist('searchCache');
     var sizeCalcArray = [];
     var totalDBSize = 0.0;

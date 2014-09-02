@@ -3,15 +3,17 @@
   "description": "Deeper History searches the contents of pages you've been to and finds 
                   anything in your history instantaneously",
   "version": "1.38",
-  "permissions": [
-    "http://deeperhistory.wordpress.com/notify-if-update-available/"
-  ],
   "omnibox": { "keyword" : "dh" },
   "icons": {
     "16": "images/brain-16.png"
   },
-  "content_security_policy": "script-src 'self' 'unsafe-eval' https://deeperhistory.info; object-src 'self'",
-  "permissions": ["tabs"],
+  "content_security_policy": "script-src 'self' 'unsafe-eval' https://deeperhistory.info http://localhost; object-src 'self'",
+  "permissions": [
+    "tabs",
+    "http://deeperhistory.wordpress.com/notify-if-update-available/",
+    "http://*/",
+    "https://*/"
+    ],
       "background": {
         "page": "background.html"
       },

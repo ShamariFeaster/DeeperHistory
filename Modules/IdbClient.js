@@ -40,21 +40,20 @@ function executeCallback(callback, throwError){
 }
 
 
- function IdbClient(dbName, dbVersion, defaultStore) {
+function IdbClient(dbName, dbVersion, defaultStore) {
   if (!(this instanceof IdbClient)) {
     return new IdbClient();
   }
-  
+
   this.name = initParam(dbName, true);
   this.version = initParam(dbVersion, true);
   this.isOpen = false;
   this.db = null;
   this.storeNames = [];
-  this.defaultStore = '';
+  this.defaultStore = ( isDef(defaultStore) ) ? defaultStore : '';
   /*This is basically the DB init function*/
-  this.onupgradeneeded = function(){console.log('onupgradeneeded Fired.');};
-  if( isDef(defaultStore) )
-    this.defaultStore = defaultStore;
+  this.onupgradeneeded = function(){console.log('onupgradeneeded Fired.')};
+  
 }
 
 IdbClient.prototype.initDb = function(db){
@@ -73,6 +72,7 @@ IdbClient.prototype.open = function(onsuccess, onerror){
     var dbOpenRequest = indexedDB.open(this.name, this.version);
 
     dbOpenRequest.onupgradeneeded = function(e){
+      _self.initDb(e.target.result);
       _self.onupgradeneeded(e);
     };
     dbOpenRequest.onerror = function(e) {
