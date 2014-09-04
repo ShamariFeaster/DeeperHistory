@@ -215,10 +215,11 @@ function runtimeOnConnect(port) {
           pm.getTabPorts(tabId).splice(index, 1);
         }
         try{
-          chrome.tabs.get(tabId, function(tab){
-            chrome.tabs.executeScript(tab.id, {file: 'core.js'});
-          });
-          
+          if(!tab.url.startsWith('chrome://')){
+            chrome.tabs.get(tabId, function(tab){
+              chrome.tabs.executeScript(tab.id, {file: 'core.js'});
+            });
+          }
         }catch(e){
           um.debug(1,MY_NAME,'runtimeOnConnect','ERROR: Trying to re-execute content script on tab.');
         }
