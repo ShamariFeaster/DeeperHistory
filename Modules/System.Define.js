@@ -264,13 +264,16 @@ function tabsOnActivated(tab) {
       um.log('tabsOnActivated', um.printf('Current Tab#: %s Activated. Last Tab# %s Has Port Open: %s Page Title: %s, url: %s'
                         , tm.currId(), tm.lastId(), pm.hasPorts(tm.currId()), tm.currTitle(), sm.currPageUrl()),MY_NAME,2);
       try{//Should use
-        chrome.tabs.executeScript(tab.id, {file: 'lib/jquery.js'}, function(){
+        if(!tab.url.startsWith('chrome://')){
+          chrome.tabs.executeScript(tab.id, {file: 'lib/jquery.js'}, function(){
           chrome.tabs.executeScript(tab.id, {file: 'core.js'},
           function(){
             um.log('tabsOnActivated','Tab Activated and script run.',MY_NAME,1);
             pm.postMessageToPort(tab.id,{changeHighlightColor : localStorage['highlightColor']});
             });
           });
+        }
+        
       }catch(e){
         um.debug(1,MY_NAME,'runtimeOnConnect','ERROR: Trying to re-execute content script on tab.');
       }
