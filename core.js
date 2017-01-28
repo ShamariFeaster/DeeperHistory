@@ -3,7 +3,7 @@ jQuery(function(){
   var lastLinkCount = 0, currLinkCount = 0;
   var customStyles = document.createElement('style'); 
   customStyles.id = 'customStyles';
-  document.documentElement.insertBefore(customStyles); 
+  document.head.appendChild(customStyles); 
   function onMessageHandler(msg){
     for(var i in msg){ var msgType = i;}//get message
     switch(msgType) {
