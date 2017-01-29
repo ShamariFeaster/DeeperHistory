@@ -27,6 +27,9 @@ function runtimeOnInstalled(){
 
 }
 
+//looks at and diffs various paths off a given hostname. The similar
+//parts are stored as decoration (think sidebars, nav, etc)
+
 function getDecoration(host, site, siteUrl, dmp){
   var diffResults = null;
   var thisDecoration = '';
@@ -248,6 +251,15 @@ function tabsOnCreated(tab) {
   }
 }
 
+function showEnabled(){
+  chrome.browserAction.setTitle({title: 'Deeper History Is On. Press To Turn Off.\n\nGo To chrome://extensions And Visit The\nDeeper History Options Page To Learn More\nAbout This Feature'});
+  chrome.browserAction.setIcon({path: {19: 'images/DH-BA-19px-on.png', 38: 'images/DH-BA-19px-on.png'}});
+}
+function showDisabled(){
+  chrome.browserAction.setTitle({title: 'Deeper History Is Off. Press To Turn On.\n\nGo To chrome://extensions And Visit The\nDeeper History Options Page To Learn More\nAbout This Feature'});
+  chrome.browserAction.setIcon({path: {19: 'images/DH-BA-19px-off.png', 38: 'images/DH-BA-19px-off.png'}});
+}
+
 //captures current tab information
 function tabsOnActivated(tab) {
 
@@ -256,12 +268,19 @@ function tabsOnActivated(tab) {
       var sm = require('State');
       var pm = require('Port');
       var oldId = tm.currId();
+      var hostname = strm.getHostName(tab.url);
       pm.postMessageToPort(oldId, {turnOffShift : true});
       tm.currId(tab.id);
       tm.lastId(tm.currId());
       tm.currTitle(tab.title);
       sm.currPageUrl(tab.url);
 
+      if( typeof sm.blackList[ hostname ] == 'undefined' ){
+        showEnabled();
+      }else{
+        showDisabled();
+      }
+      
       um.log('tabsOnActivated', um.printf('Current Tab#: %s Activated. Last Tab# %s Has Port Open: %s Page Title: %s, url: %s'
                         , tm.currId(), tm.lastId(), pm.hasPorts(tm.currId()), tm.currTitle(), sm.currPageUrl()),MY_NAME,2);
       try{//Should use
@@ -326,9 +345,18 @@ function tabsOnUpdated(tabId, changeInfo, tab){
 }
 
 function process(queueItem, start){
+  
+    
   //sanity check and base case
   if(queueItem == -1 || typeof queueItem == 'undefined')
     return;
+  
+  var hostname = strm.getHostName(queueItem['url']);
+  if( typeof sm.blackList[ hostname ] != 'undefined' ){
+    console.log(hostname + ' on blacklist: not processed');
+    process(-1);
+  }
+  
   //time splitting
   if( sm.secDiff(start) > 1 ){
     processQueue.splice(0,1,queueItem);
@@ -622,18 +650,32 @@ function onInputEntered(text) {
  
 }
 
+
+
 function onBrowserActionClicked(){
   MMCD_USAGE.processOccuranceByUser(MMCD_USAGE.EVENTS.power_button);
   if( sm.isExtenstionEnabled() == true){
     console.log('Exttension disabled: ' + sm.isExtenstionEnabled());
-    chrome.browserAction.setTitle({title: 'Deeper History Is Off. Press To Turn On.\n\nGo To chrome://extensions And Visit The\nDeeper History Options Page To Learn More\nAbout This Feature'});
     sm.isExtenstionEnabled(false);
-    chrome.browserAction.setIcon({path: {19: 'images/DH-BA-19px-off.png', 38: 'images/DH-BA-19px-off.png'}});
+    var hostname = strm.getHostName(sm.currPageUrl());
+    sm.blackList[ hostname ] = true;
+    chrome.storage.local.set({'blacklist' : sm.blackList});
+    showDisabled();
+    
+    //remove previous entries for this hostname
+    IdbClient.forEach(function(record){
+      if(strm.getHostName(record.url) == hostname){
+        this.deleteRecord(record.timestamp, function(){
+          console.log('blacklisted and Removed all entries of ' + hostname);
+        });
+      }
+    });
   }else{
     console.log('Exttension enabled: ' + sm.isExtenstionEnabled());
-    chrome.browserAction.setTitle({title: 'Deeper History Is On. Press To Turn Off.\n\nGo To chrome://extensions And Visit The\nDeeper History Options Page To Learn More\nAbout This Feature'});
     sm.isExtenstionEnabled(true);
-    chrome.browserAction.setIcon({path: {19: 'images/DH-BA-19px-on.png', 38: 'images/DH-BA-19px-on.png'}});
+    delete sm.blackList[ strm.getHostName(sm.currPageUrl()) ];
+    chrome.storage.local.set({'blacklist' : sm.blackList});
+    showEnabled();
   }
 }
 

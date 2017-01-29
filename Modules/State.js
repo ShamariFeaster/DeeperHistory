@@ -17,7 +17,8 @@ structureJS.module('State', function(require){
     isExtenstionEnabled,
     isUpdateAvailable,
     lastKeyAdded,
-    TARGET_COMPRESSION;
+    TARGET_COMPRESSION,
+    blackList = {};
   
   (initManager = function(){
     _this.currPageUrl = '';
@@ -40,7 +41,7 @@ structureJS.module('State', function(require){
     searchOptions = {
       keys: ['terms'],
       id: 'url'
-    }
+    };
     persistenceCache = {
       buffer : '',
       stateInfo : {},
@@ -48,7 +49,13 @@ structureJS.module('State', function(require){
       cache : { sites : {} },
       searchCache : [],
       resultCache : []     
+    };
+    var bl = localStorage['blacklist'];
+    if(typeof bl == 'undefined'){
+      localStorage['blacklist'] = blackList = {};
     }
+    
+    
   })();
   return {
     currPageUrl : Util.getSet(_this._currentUrl),
@@ -93,6 +100,7 @@ structureJS.module('State', function(require){
         return localStorage[key];
       else
         localStorage[key] = value;
-    }
+    },
+    blackList : blackList
   }
 });
