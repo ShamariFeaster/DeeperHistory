@@ -354,7 +354,6 @@ function process(queueItem, start){
   var hostname = strm.getHostName(queueItem['url']);
   if( typeof sm.blackList[ hostname ] != 'undefined' ){
     console.log(hostname + ' on blacklist: not processed');
-    process(-1);
   }
   
   //time splitting
@@ -377,7 +376,7 @@ function process(queueItem, start){
   if(typeof site != 'undefined'){
     
     //do process
-    if(site[timestamp] != ''){
+    if(site[timestamp] != '' && typeof sm.blackList[ hostname ] == 'undefined'){
       //need to see if user wants encryption
       terms = cm.encrypt( site[timestamp] ); //CRYPTO >>>
       
@@ -659,7 +658,7 @@ function onBrowserActionClicked(){
     sm.isExtenstionEnabled(false);
     var hostname = strm.getHostName(sm.currPageUrl());
     sm.blackList[ hostname ] = true;
-    chrome.storage.local.set({'blacklist' : sm.blackList});
+    localStorage['blacklist'] = JSON.stringify(sm.blackList);
     showDisabled();
     
     //remove previous entries for this hostname
@@ -674,7 +673,7 @@ function onBrowserActionClicked(){
     console.log('Exttension enabled: ' + sm.isExtenstionEnabled());
     sm.isExtenstionEnabled(true);
     delete sm.blackList[ strm.getHostName(sm.currPageUrl()) ];
-    chrome.storage.local.set({'blacklist' : sm.blackList});
+    localStorage['blacklist'] = JSON.stringify(sm.blackList);
     showEnabled();
   }
 }

@@ -52,7 +52,9 @@ structureJS.module('State', function(require){
     };
     var bl = localStorage['blacklist'];
     if(typeof bl == 'undefined'){
-      localStorage['blacklist'] = blackList = {};
+      localStorage['blacklist'] = blackList = JSON.stringify({});
+    }else{
+      blackList = JSON.parse(bl);
     }
     
     
